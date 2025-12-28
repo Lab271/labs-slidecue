@@ -264,19 +264,69 @@ end tell
   },
 
   async gotoSlide(slideNumber: number) {
-    await runAppleScript(`
-tell application "Microsoft PowerPoint" to activate
-delay 0.1
-tell application "System Events"
-  keystroke "${slideNumber}"
-  delay 0.1
-  keystroke return
+    console.log(`Going to slide ${slideNumber}...`);
+    
+    // Use AppleScript's go to first/last slide commands which work reliably,
+    // then navigate to the target slide
+    try {
+      if (slideNumber === 1) {
+        // Go to first slide - this works!
+        await runAppleScript(`
+tell application "Microsoft PowerPoint"
+  tell slide show view of slide show window 1
+    go to first slide
+  end tell
 end tell
-    `);
+        `);
+      } else if (slideNumber >= totalSlides) {
+        // Go to last slide
+        await runAppleScript(`
+tell application "Microsoft PowerPoint"
+  tell slide show view of slide show window 1
+    go to last slide
+  end tell
+end tell
+        `);
+      } else {
+        // For middle slides: go to first, then advance to target
+        // This skips hidden slides automatically
+        await runAppleScript(`
+tell application "Microsoft PowerPoint"
+  tell slide show view of slide show window 1
+    go to first slide
+  end tell
+end tell
+        `);
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Now advance slide by slide until we reach target
+        // We need to keep checking current position since hidden slides are skipped
+        let currentPos = await queryCurrentSlide();
+        let iterations = 0;
+        const maxIterations = totalSlides + 5; // Safety limit
+        
+        while (currentPos < slideNumber && iterations < maxIterations) {
+          await runAppleScript(`
+tell application "Microsoft PowerPoint"
+  tell slide show view of slide show window 1
+    go to next slide
+  end tell
+end tell
+          `);
+          await new Promise(resolve => setTimeout(resolve, 50));
+          currentPos = await queryCurrentSlide();
+          iterations++;
+        }
+      }
+    } catch (e) {
+      console.error('Error in gotoSlide:', e);
+    }
     
     await new Promise(resolve => setTimeout(resolve, 200));
     currentSlide = await queryCurrentSlide();
     currentAnimationStep = 0;
+    console.log(`Now on slide ${currentSlide}`);
   },
 
   async getSlideInfo(): Promise<SlideInfo> {
