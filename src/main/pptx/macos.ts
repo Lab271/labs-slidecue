@@ -163,16 +163,19 @@ end tell
     console.log('Visible thumbnails:', visibleThumbnails);
     console.log('Hidden slides:', hiddenSlides);
     
-    // Update counts based on actual generated thumbnails
-    const actualTotalSlides = allThumbnails.length;
-    const actualVisibleCount = visibleThumbnails.length;
+    // Update module-level counts based on actual generated thumbnails
+    // This ensures getSlideInfo() returns accurate counts
+    totalSlides = allThumbnails.length;
+    visibleSlideCount = visibleThumbnails.length;
+    
+    console.log(`Updated slide counts: ${visibleSlideCount} visible of ${totalSlides} total`);
     
     // Return metadata - only include visible thumbnails
     const result: SlideMetadata = {
       thumbnails: visibleThumbnails,
-      totalSlides: actualTotalSlides,
+      totalSlides,
       hiddenSlides,
-      visibleSlideCount: actualVisibleCount,
+      visibleSlideCount,
     };
     
     return result;
