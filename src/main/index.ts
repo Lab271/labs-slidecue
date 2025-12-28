@@ -18,10 +18,12 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
+    fullscreen: true,
     webPreferences: {
       preload: path.join(__dirname, '../preload/index.js'),
       contextIsolation: true,
       nodeIntegration: false,
+      webSecurity: false, // Allow loading local files
     },
   });
 
@@ -95,17 +97,40 @@ ipcMain.handle('import-presentation', async () => {
   );
   await fs.mkdir(currentThumbsDir, { recursive: true });
 
-  // Export thumbnails
+  // Send progress callback
+  const sendProgress = (step: number, total: number, message: string) => {
+    mainWindow?.webContents.send('import-progress', { step, total, message });
+  };
+
+  // Now that we have a file selected, start the loading screen
+  sendProgress(0, 5, 'Starting...');
+  
+  // Export thumbnails with progress
+  sendProgress(1, 5, 'Opening presentation...');
   await automation.openPresentation(presentationFile);
-  thumbnailPaths = await automation.exportThumbnails(currentThumbsDir);
+  
+  sendProgress(2, 5, 'Getting slide count...');
+  const slideInfo = await automation.getSlideInfo();
+  
+  sendProgress(3, 5, 'Converting to PDF...');
+  const slideMetadata = await automation.exportThumbnails(currentThumbsDir, (current, total) => {
+    sendProgress(3 + (current / total), 5, `Converting slide ${current}/${total}...`);
+  });
+  
+  thumbnailPaths = slideMetadata.thumbnails;
+  sendProgress(5, 5, 'Done!');
 
   console.log('Thumbnails exported to:', currentThumbsDir);
   console.log('Thumbnail files:', thumbnailPaths);
+  console.log('Hidden slides:', slideMetadata.hiddenSlides);
 
   return {
     filePath: presentationFile,
     fileName: path.basename(presentationFile),
     thumbnails: thumbnailPaths,
+    totalSlides: slideMetadata.totalSlides,
+    visibleSlideCount: slideMetadata.visibleSlideCount,
+    hiddenSlides: slideMetadata.hiddenSlides,
   };
 });
 

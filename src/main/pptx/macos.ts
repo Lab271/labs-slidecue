@@ -3,13 +3,16 @@ import { promisify } from 'util';
 import { readdir, access, mkdir, unlink, copyFile } from 'fs/promises';
 import { join, basename } from 'path';
 import { tmpdir } from 'os';
-import { PowerPointAutomation, SlideInfo } from './types';
+import { PowerPointAutomation, SlideInfo, SlideMetadata, ProgressCallback } from './types';
+import { getHiddenSlides, actualToVisibleIndex, visibleToActualIndex } from './parseHiddenSlides';
 
 const execAsync = promisify(exec);
 
 // Track slide state since we can't reliably query PowerPoint
-let currentSlide = 1;
+let currentVisibleSlide = 1; // Current slide in visible-only count
 let totalSlides = 1;
+let hiddenSlides: number[] = [];
+let visibleSlideCount = 1;
 let currentPresentationPath = '';
 let currentThumbsDir = '';
 let localPresentationCopy = '';
@@ -51,6 +54,9 @@ export const macOSAutomation: PowerPointAutomation = {
     console.log('Copying presentation to temp location...');
     await copyFile(filePath, localPresentationCopy);
     
+    // Detect hidden slides before opening
+    hiddenSlides = await getHiddenSlides(localPresentationCopy);
+    
     // Use 'open' command which handles permissions better than AppleScript
     console.log('Opening presentation...');
     await execAsync(`open -a "Microsoft PowerPoint" "${localPresentationCopy}"`);
@@ -69,11 +75,15 @@ end tell
     } catch {
       totalSlides = 1;
     }
-    currentSlide = 1;
-    console.log(`Opened presentation with ${totalSlides} slides`);
+    
+    // Calculate visible slide count
+    visibleSlideCount = totalSlides - hiddenSlides.length;
+    currentVisibleSlide = 1;
+    
+    console.log(`Opened presentation with ${totalSlides} slides (${hiddenSlides.length} hidden, ${visibleSlideCount} visible)`);
   },
 
-  async exportThumbnails(outputDir: string) {
+  async exportThumbnails(outputDir: string, onProgress?: ProgressCallback) {
     currentThumbsDir = outputDir;
     await mkdir(outputDir, { recursive: true });
     
@@ -82,6 +92,7 @@ end tell
     const pdfPath = join(outputDir, 'presentation.pdf');
     
     console.log('Converting presentation to PDF and images...');
+    onProgress?.(1, totalSlides);
     
     try {
       // Use LibreOffice headless conversion (most reliable)
@@ -143,13 +154,20 @@ end tell
     
     console.log('Generated thumbnails:', thumbnails);
     
-    // If no thumbnails were created, return placeholder paths
-    return thumbnails.length > 0 ? thumbnails : 
-      Array.from({ length: totalSlides }, (_, i) => `slide_${String(i + 1).padStart(3, '0')}.png`);
+    // Return metadata including hidden slide info
+    const result: SlideMetadata = {
+      thumbnails: thumbnails.length > 0 ? thumbnails : 
+        Array.from({ length: totalSlides }, (_, i) => `slide_${String(i + 1).padStart(3, '0')}.png`),
+      totalSlides,
+      hiddenSlides,
+      visibleSlideCount,
+    };
+    
+    return result;
   },
 
   async startSlideshow() {
-    currentSlide = 1;
+    currentVisibleSlide = 1;
     await runAppleScript(`
 tell application "Microsoft PowerPoint"
   activate
@@ -164,35 +182,40 @@ end tell
 
   async nextSlide() {
     await sendKeyCode(124); // Right arrow
-    if (currentSlide < totalSlides) {
-      currentSlide++;
+    // PowerPoint automatically skips hidden slides, so we just track visible count
+    if (currentVisibleSlide < visibleSlideCount) {
+      currentVisibleSlide++;
     }
   },
 
   async prevSlide() {
     await sendKeyCode(123); // Left arrow
-    if (currentSlide > 1) {
-      currentSlide--;
+    // PowerPoint automatically skips hidden slides going backward too
+    if (currentVisibleSlide > 1) {
+      currentVisibleSlide--;
     }
   },
 
-  async gotoSlide(index: number) {
+  async gotoSlide(visibleIndex: number) {
+    // Convert visible index to actual slide number for PowerPoint
+    const actualIndex = visibleToActualIndex(visibleIndex, hiddenSlides);
     await runAppleScript(`
 tell application "Microsoft PowerPoint" to activate
 delay 0.1
 tell application "System Events"
-  keystroke "${index}"
+  keystroke "${actualIndex}"
   delay 0.1
   keystroke return
 end tell
     `);
-    currentSlide = index;
+    currentVisibleSlide = visibleIndex;
   },
 
   async getSlideInfo(): Promise<SlideInfo> {
     return {
-      current: currentSlide,
-      total: totalSlides,
+      current: currentVisibleSlide,
+      total: visibleSlideCount,
+      hiddenSlides: hiddenSlides,
     };
   },
 

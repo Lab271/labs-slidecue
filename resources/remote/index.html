@@ -221,8 +221,21 @@
     const btnNext = document.getElementById('btn-next');
     
     let socket = null;
-    let slideInfo = { current: 1, total: 1 };
+    let slideInfo = { current: 1, total: 1, hiddenSlides: [] };
     let viewMode = 'next';
+    
+    // Convert visible slide index to actual slide index (for thumbnail filenames)
+    function visibleToActualIndex(visibleIndex, hiddenSlides) {
+      let actualIndex = 0;
+      let visibleCount = 0;
+      while (visibleCount < visibleIndex) {
+        actualIndex++;
+        if (!hiddenSlides.includes(actualIndex)) {
+          visibleCount++;
+        }
+      }
+      return actualIndex;
+    }
     
     // PIN input handling
     pinInputs.forEach((input, index) => {
@@ -295,12 +308,16 @@
       currentSlideEl.textContent = slideInfo.current;
       totalSlidesEl.textContent = slideInfo.total;
       
-      const previewSlide = viewMode === 'current' 
+      // Calculate which visible slide to preview
+      const previewVisibleSlide = viewMode === 'current' 
         ? slideInfo.current 
         : Math.min(slideInfo.current + 1, slideInfo.total);
       
-      // Update placeholder text
-      previewNum.textContent = previewSlide;
+      // Convert visible index to actual index for thumbnail filename
+      const previewActualSlide = visibleToActualIndex(previewVisibleSlide, slideInfo.hiddenSlides || []);
+      
+      // Update placeholder text (shows visible slide number)
+      previewNum.textContent = previewVisibleSlide;
       previewLabel.textContent = viewMode === 'current' ? 'Current Slide' : 'Next Slide';
       
       // If last slide and viewing "next", show "End"
@@ -310,8 +327,8 @@
         slideImg.style.display = 'none';
         slidePlaceholder.style.display = 'flex';
       } else {
-        // Try to load the actual slide image
-        const imgUrl = `/thumbnails/slide_${String(previewSlide).padStart(3, '0')}.png?t=${Date.now()}`;
+        // Try to load the actual slide image (use actual slide index for filename)
+        const imgUrl = `/thumbnails/slide_${String(previewActualSlide).padStart(3, '0')}.png?t=${Date.now()}`;
         slideImg.onload = () => {
           slideImg.style.display = 'block';
           slidePlaceholder.style.display = 'none';
