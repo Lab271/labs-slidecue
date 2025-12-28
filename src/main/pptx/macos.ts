@@ -4,15 +4,15 @@ import { readdir, access, mkdir, unlink, copyFile } from 'fs/promises';
 import { join, basename } from 'path';
 import { tmpdir } from 'os';
 import { PowerPointAutomation, SlideInfo, SlideMetadata, ProgressCallback } from './types';
-import { getHiddenSlides, actualToVisibleIndex, visibleToActualIndex } from './parseHiddenSlides';
+import { parsePresentationData, PresentationData, getNextVisibleSlide, getSlideData } from './slideParser';
 
 const execAsync = promisify(exec);
 
-// Track slide state since we can't reliably query PowerPoint
-let currentVisibleSlide = 1; // Current slide in visible-only count
+// Presentation state
+let presentationData: PresentationData | null = null;
+let currentSlide = 1;
+let currentAnimationStep = 0;
 let totalSlides = 1;
-let hiddenSlides: number[] = [];
-let visibleSlideCount = 1;
 let currentPresentationPath = '';
 let currentThumbsDir = '';
 let localPresentationCopy = '';
@@ -31,6 +31,28 @@ tell application "System Events"
   key code ${keyCode}
 end tell
   `);
+}
+
+/**
+ * Query PowerPoint for the actual current slide number
+ */
+async function queryCurrentSlide(): Promise<number> {
+  try {
+    const result = await runAppleScript(`
+tell application "Microsoft PowerPoint"
+  try
+    set ss to slide show window 1
+    set currentSlideIndex to slide index of slide of slide show view of ss
+    return currentSlideIndex
+  on error
+    return 1
+  end try
+end tell
+    `);
+    return parseInt(result.trim(), 10) || 1;
+  } catch {
+    return currentSlide;
+  }
 }
 
 export const macOSAutomation: PowerPointAutomation = {
@@ -54,8 +76,11 @@ export const macOSAutomation: PowerPointAutomation = {
     console.log('Copying presentation to temp location...');
     await copyFile(filePath, localPresentationCopy);
     
-    // Detect hidden slides before opening
-    hiddenSlides = await getHiddenSlides(localPresentationCopy);
+    // Parse presentation data (slides, hidden, animations)
+    console.log('Parsing presentation data...');
+    presentationData = await parsePresentationData(localPresentationCopy);
+    
+    console.log('Presentation data:', JSON.stringify(presentationData, null, 2));
     
     // Use 'open' command which handles permissions better than AppleScript
     console.log('Opening presentation...');
@@ -64,23 +89,24 @@ export const macOSAutomation: PowerPointAutomation = {
     // Wait for file to open
     await new Promise(resolve => setTimeout(resolve, 2000));
     
-    // Get total slides
+    // Get total slides from PowerPoint to verify
     try {
       const total = await runAppleScript(`
 tell application "Microsoft PowerPoint"
   return count of slides of active presentation
 end tell
       `);
-      totalSlides = parseInt(total, 10) || 1;
+      totalSlides = parseInt(total, 10) || presentationData.totalSlides;
     } catch {
-      totalSlides = 1;
+      totalSlides = presentationData.totalSlides;
     }
     
-    // Calculate visible slide count
-    visibleSlideCount = totalSlides - hiddenSlides.length;
-    currentVisibleSlide = 1;
+    currentSlide = 1;
+    currentAnimationStep = 0;
     
-    console.log(`Opened presentation with ${totalSlides} slides (${hiddenSlides.length} hidden, ${visibleSlideCount} visible)`);
+    console.log(`Opened presentation with ${totalSlides} slides`);
+    console.log(`Visible slides: ${presentationData.visibleSlides.join(', ')}`);
+    console.log(`Hidden slides: ${presentationData.hiddenSlides.join(', ')}`);
   },
 
   async exportThumbnails(outputDir: string, onProgress?: ProgressCallback) {
@@ -119,15 +145,29 @@ end tell
       // Convert PDF pages to PNG using pdftoppm
       await execAsync(`pdftoppm -png -r 150 "${pdfPath}" "${outputDir}/slide"`);
       
-      // pdftoppm creates slide-1.png, slide-2.png, etc. - rename to slide_001.png format
+      // pdftoppm creates slide-1.png, slide-2.png, etc.
+      // LibreOffice only exports visible slides, so we need to rename them
+      // to match the actual PowerPoint slide numbers
       const files = await readdir(outputDir);
-      for (const file of files) {
-        const match = file.match(/^slide-(\d+)\.png$/);
-        if (match) {
-          const num = parseInt(match[1], 10);
-          const newName = `slide_${String(num).padStart(3, '0')}.png`;
-          await execAsync(`mv "${join(outputDir, file)}" "${join(outputDir, newName)}"`);
-        }
+      const pngFiles = files.filter(f => f.match(/^slide-\d+\.png$/)).sort((a, b) => {
+        const numA = parseInt(a.match(/\d+/)![0]);
+        const numB = parseInt(b.match(/\d+/)![0]);
+        return numA - numB;
+      });
+      
+      // Use visible slides from parsed data
+      const visibleSlides = presentationData?.visibleSlides || [];
+      
+      console.log('Visible slide numbers:', visibleSlides);
+      console.log('PNG files to rename:', pngFiles);
+      
+      // Rename each exported slide to its actual PowerPoint slide number
+      for (let i = 0; i < pngFiles.length; i++) {
+        const file = pngFiles[i];
+        const actualSlideNum = visibleSlides[i] || (i + 1);
+        const newName = `slide_${String(actualSlideNum).padStart(3, '0')}.png`;
+        await execAsync(`mv "${join(outputDir, file)}" "${join(outputDir, newName)}"`);
+        console.log(`Renamed ${file} -> ${newName}`);
       }
       
       // Clean up PDF
@@ -138,7 +178,7 @@ end tell
     }
     
     // Find all generated PNG files
-    let allThumbnails: string[] = [];
+    let thumbnails: string[] = [];
     try {
       const files = await readdir(outputDir);
       const pngs = files
@@ -146,43 +186,29 @@ end tell
         .sort();
       
       for (const png of pngs) {
-        allThumbnails.push(join(outputDir, png));
+        thumbnails.push(join(outputDir, png));
       }
     } catch {
       // Ignore
     }
     
-    console.log('Generated thumbnails (all):', allThumbnails);
+    console.log('Generated thumbnails:', thumbnails);
     
-    // Filter out hidden slide thumbnails for the visible-only list
-    const visibleThumbnails = allThumbnails.filter((_, index) => {
-      const slideNum = index + 1; // 1-based slide number
-      return !hiddenSlides.includes(slideNum);
-    });
-    
-    console.log('Visible thumbnails:', visibleThumbnails);
-    console.log('Hidden slides:', hiddenSlides);
-    
-    // Update module-level counts based on actual generated thumbnails
-    // This ensures getSlideInfo() returns accurate counts
-    totalSlides = allThumbnails.length;
-    visibleSlideCount = visibleThumbnails.length;
-    
-    console.log(`Updated slide counts: ${visibleSlideCount} visible of ${totalSlides} total`);
-    
-    // Return metadata - only include visible thumbnails
+    // Return metadata
     const result: SlideMetadata = {
-      thumbnails: visibleThumbnails,
+      thumbnails,
       totalSlides,
-      hiddenSlides,
-      visibleSlideCount,
+      hiddenSlides: presentationData?.hiddenSlides || [],
+      visibleSlides: presentationData?.visibleSlides || [],
     };
     
     return result;
   },
 
   async startSlideshow() {
-    currentVisibleSlide = 1;
+    currentSlide = 1;
+    currentAnimationStep = 0;
+    
     await runAppleScript(`
 tell application "Microsoft PowerPoint"
   activate
@@ -193,44 +219,96 @@ tell application "System Events"
 end tell
     `);
     await new Promise(resolve => setTimeout(resolve, 500));
+    
+    // PowerPoint may skip hidden slide 1, query actual position
+    currentSlide = await queryCurrentSlide();
   },
 
   async nextSlide() {
+    const slideData = presentationData ? getSlideData(currentSlide, presentationData) : null;
+    const animationsOnSlide = slideData?.animationClicks || 0;
+    
+    // Send the keystroke
     await sendKeyCode(124); // Right arrow
-    // PowerPoint automatically skips hidden slides, so we just track visible count
-    if (currentVisibleSlide < visibleSlideCount) {
-      currentVisibleSlide++;
+    
+    // Wait for PowerPoint to process
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Check if we advanced an animation or moved to next slide
+    if (currentAnimationStep < animationsOnSlide) {
+      // Might be an animation click
+      currentAnimationStep++;
+    }
+    
+    // Query PowerPoint for actual slide number
+    const actualSlide = await queryCurrentSlide();
+    
+    if (actualSlide !== currentSlide) {
+      // We moved to a new slide
+      currentSlide = actualSlide;
+      currentAnimationStep = 0;
+      console.log(`Moved to slide ${currentSlide}`);
+    } else {
+      console.log(`Animation ${currentAnimationStep}/${animationsOnSlide} on slide ${currentSlide}`);
     }
   },
 
   async prevSlide() {
     await sendKeyCode(123); // Left arrow
-    // PowerPoint automatically skips hidden slides going backward too
-    if (currentVisibleSlide > 1) {
-      currentVisibleSlide--;
-    }
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
+    // Query PowerPoint for actual slide number
+    currentSlide = await queryCurrentSlide();
+    currentAnimationStep = 0;
+    console.log(`Moved to slide ${currentSlide}`);
   },
 
-  async gotoSlide(visibleIndex: number) {
-    // Convert visible index to actual slide number for PowerPoint
-    const actualIndex = visibleToActualIndex(visibleIndex, hiddenSlides);
+  async gotoSlide(slideNumber: number) {
     await runAppleScript(`
 tell application "Microsoft PowerPoint" to activate
 delay 0.1
 tell application "System Events"
-  keystroke "${actualIndex}"
+  keystroke "${slideNumber}"
   delay 0.1
   keystroke return
 end tell
     `);
-    currentVisibleSlide = visibleIndex;
+    
+    await new Promise(resolve => setTimeout(resolve, 200));
+    currentSlide = await queryCurrentSlide();
+    currentAnimationStep = 0;
   },
 
   async getSlideInfo(): Promise<SlideInfo> {
+    // Query PowerPoint for actual slide
+    const actualSlide = await queryCurrentSlide();
+    
+    if (actualSlide !== currentSlide) {
+      currentSlide = actualSlide;
+      currentAnimationStep = 0;
+    }
+    
+    const slideData = presentationData ? getSlideData(currentSlide, presentationData) : null;
+    const animationsOnSlide = slideData?.animationClicks || 0;
+    
+    // Find next visible slide for preview
+    const nextVisible = presentationData 
+      ? getNextVisibleSlide(currentSlide, presentationData)
+      : (currentSlide < totalSlides ? currentSlide + 1 : null);
+    
+    // Check if we're on the last visible slide
+    const visibleSlides = presentationData?.visibleSlides || [];
+    const isLastSlide = visibleSlides.length > 0 
+      ? currentSlide === visibleSlides[visibleSlides.length - 1]
+      : currentSlide >= totalSlides;
+    
     return {
-      current: currentVisibleSlide,
-      total: visibleSlideCount,
-      hiddenSlides: hiddenSlides,
+      currentSlide,
+      totalSlides,
+      animationStep: currentAnimationStep,
+      animationsOnSlide,
+      nextVisibleSlide: nextVisible,
+      isLastSlide,
     };
   },
 
@@ -254,5 +332,10 @@ end tell
       }
       localPresentationCopy = '';
     }
+    
+    // Reset state
+    presentationData = null;
+    currentSlide = 1;
+    currentAnimationStep = 0;
   },
 };

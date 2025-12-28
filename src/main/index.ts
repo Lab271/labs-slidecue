@@ -130,7 +130,7 @@ ipcMain.handle('import-presentation', async () => {
     fileName: path.basename(presentationFile),
     thumbnails: thumbnailPaths,
     totalSlides: slideMetadata.totalSlides,
-    visibleSlideCount: slideMetadata.visibleSlideCount,
+    visibleSlides: slideMetadata.visibleSlides,
     hiddenSlides: slideMetadata.hiddenSlides,
   };
 });

@@ -1,14 +1,17 @@
 export interface SlideInfo {
-  current: number;
-  total: number;
-  hiddenSlides: number[];
+  currentSlide: number;           // Actual PowerPoint slide number
+  totalSlides: number;            // Total slides including hidden
+  animationStep: number;          // Current animation step on this slide (0 = no animations played)
+  animationsOnSlide: number;      // Total animations on current slide
+  nextVisibleSlide: number | null; // Next slide that isn't hidden (for preview)
+  isLastSlide: boolean;           // Are we on the last visible slide?
 }
 
 export interface SlideMetadata {
   thumbnails: string[];
   totalSlides: number;
   hiddenSlides: number[];
-  visibleSlideCount: number;
+  visibleSlides: number[];
 }
 
 export type ProgressCallback = (current: number, total: number) => void;

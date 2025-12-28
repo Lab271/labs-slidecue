@@ -221,21 +221,8 @@
     const btnNext = document.getElementById('btn-next');
     
     let socket = null;
-    let slideInfo = { current: 1, total: 1, hiddenSlides: [] };
+    let slideInfo = { currentSlide: 1, totalSlides: 1, animationStep: 0, animationsOnSlide: 0, nextVisibleSlide: 2, isLastSlide: false };
     let viewMode = 'next';
-    
-    // Convert visible slide index to actual slide index (for thumbnail filenames)
-    function visibleToActualIndex(visibleIndex, hiddenSlides) {
-      let actualIndex = 0;
-      let visibleCount = 0;
-      while (visibleCount < visibleIndex) {
-        actualIndex++;
-        if (!hiddenSlides.includes(actualIndex)) {
-          visibleCount++;
-        }
-      }
-      return actualIndex;
-    }
     
     // PIN input handling
     pinInputs.forEach((input, index) => {
@@ -305,43 +292,53 @@
     }
     
     function updateUI() {
-      currentSlideEl.textContent = slideInfo.current;
-      totalSlidesEl.textContent = slideInfo.total;
+      // Show current slide number and total
+      currentSlideEl.textContent = slideInfo.currentSlide;
+      totalSlidesEl.textContent = slideInfo.totalSlides;
       
-      // Calculate which visible slide to preview
-      const previewVisibleSlide = viewMode === 'current' 
-        ? slideInfo.current 
-        : Math.min(slideInfo.current + 1, slideInfo.total);
+      // Calculate which slide to preview
+      // For "next" view, use nextVisibleSlide (skips hidden slides)
+      const previewSlide = viewMode === 'current' 
+        ? slideInfo.currentSlide 
+        : slideInfo.nextVisibleSlide;
       
-      // Convert visible index to actual index for thumbnail filename
-      const previewActualSlide = visibleToActualIndex(previewVisibleSlide, slideInfo.hiddenSlides || []);
-      
-      // Update placeholder text (shows visible slide number)
-      previewNum.textContent = previewVisibleSlide;
+      // Update placeholder text
+      previewNum.textContent = previewSlide || '✓';
       previewLabel.textContent = viewMode === 'current' ? 'Current Slide' : 'Next Slide';
       
+      // Show animation indicator if there are animations
+      if (slideInfo.animationsOnSlide > 0) {
+        const animText = ` (${slideInfo.animationStep}/${slideInfo.animationsOnSlide})`;
+        if (viewMode === 'current') {
+          previewLabel.textContent = 'Current Slide' + animText;
+        }
+      }
+      
       // If last slide and viewing "next", show "End"
-      if (viewMode === 'next' && slideInfo.current >= slideInfo.total) {
+      if (viewMode === 'next' && slideInfo.isLastSlide) {
         previewNum.textContent = '✓';
         previewLabel.textContent = 'End of Presentation';
         slideImg.style.display = 'none';
         slidePlaceholder.style.display = 'flex';
-      } else {
-        // Try to load the actual slide image (use actual slide index for filename)
-        const imgUrl = `/thumbnails/slide_${String(previewActualSlide).padStart(3, '0')}.png?t=${Date.now()}`;
+      } else if (previewSlide) {
+        // Try to load the slide image (use actual slide number for filename)
+        const imgUrl = `/thumbnails/slide_${String(previewSlide).padStart(3, '0')}.png?t=${Date.now()}`;
         slideImg.onload = () => {
           slideImg.style.display = 'block';
           slidePlaceholder.style.display = 'none';
         };
         slideImg.onerror = () => {
+          // Image not found (might be a hidden slide) - show placeholder
           slideImg.style.display = 'none';
           slidePlaceholder.style.display = 'flex';
+          previewLabel.textContent = viewMode === 'current' ? 'Current Slide (Hidden)' : 'Next Slide (Hidden)';
         };
         slideImg.src = imgUrl;
       }
       
-      prevBtn.disabled = slideInfo.current <= 1;
-      nextBtn.disabled = slideInfo.current >= slideInfo.total;
+      // Disable buttons appropriately
+      prevBtn.disabled = slideInfo.currentSlide <= 1 && slideInfo.animationStep === 0;
+      nextBtn.disabled = slideInfo.isLastSlide && slideInfo.animationStep >= slideInfo.animationsOnSlide;
     }
     
     prevBtn.addEventListener('click', () => socket?.emit('prev'));
