@@ -2,6 +2,7 @@ import { app, BrowserWindow, ipcMain, dialog, protocol, net } from 'electron';
 import path from 'path';
 import os from 'os';
 import fs from 'fs/promises';
+import fsSync from 'fs';
 import { getAutomation } from './pptx/automation';
 import { startServer, stopServer, getLocalIP } from './server';
 import { setupSocketHandlers } from './server/socket';
@@ -171,9 +172,28 @@ ipcMain.handle('get-slide-info', async () => {
   return automation.getSlideInfo();
 });
 
+// Cleanup temp directories (synchronous for use in quit handler)
+function cleanupTempDirs() {
+  const tempBase = os.tmpdir();
+  const dirsToClean = ['slidecue-thumbs', 'slidecue-presentations'];
+  
+  for (const dir of dirsToClean) {
+    const dirPath = path.join(tempBase, dir);
+    try {
+      fsSync.rmSync(dirPath, { recursive: true, force: true });
+      console.log(`Cleaned up: ${dirPath}`);
+    } catch (e) {
+      // Ignore errors - directory might not exist
+    }
+  }
+}
+
+app.on('will-quit', () => {
+  cleanupTempDirs();
+});
+
 app.on('window-all-closed', () => {
   stopServer();
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  // Quit on all platforms (override macOS default behavior)
+  app.quit();
 });
