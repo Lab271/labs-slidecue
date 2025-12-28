@@ -296,6 +296,13 @@ end tell
       ? getNextVisibleSlide(currentSlide, presentationData)
       : (currentSlide < totalSlides ? currentSlide + 1 : null);
     
+    // Get notes for current and next slide
+    const currentNotes = slideData?.notes || '';
+    const nextSlideData = nextVisible && presentationData 
+      ? getSlideData(nextVisible, presentationData) 
+      : null;
+    const nextNotes = nextSlideData?.notes || '';
+    
     // Check if we're on the last visible slide
     const visibleSlides = presentationData?.visibleSlides || [];
     const isLastSlide = visibleSlides.length > 0 
@@ -309,6 +316,8 @@ end tell
       animationsOnSlide,
       nextVisibleSlide: nextVisible,
       isLastSlide,
+      currentNotes,
+      nextNotes,
     };
   },
 

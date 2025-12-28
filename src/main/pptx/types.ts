@@ -5,6 +5,8 @@ export interface SlideInfo {
   animationsOnSlide: number;      // Total animations on current slide
   nextVisibleSlide: number | null; // Next slide that isn't hidden (for preview)
   isLastSlide: boolean;           // Are we on the last visible slide?
+  currentNotes: string;           // Speaker notes for current slide
+  nextNotes: string;              // Speaker notes for next visible slide
 }
 
 export interface SlideMetadata {

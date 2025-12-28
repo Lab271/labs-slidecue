@@ -7,9 +7,24 @@
   <script src="/socket.io/socket.io.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg-primary: #0f172a;
+      --bg-secondary: #1e293b;
+      --bg-card: #334155;
+      --text-primary: #f8fafc;
+      --text-secondary: #94a3b8;
+      --text-muted: #64748b;
+      --accent: #3b82f6;
+      --accent-hover: #2563eb;
+      --success: #22c55e;
+      --border: #475569;
+    }
+    
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-      background: #f3f4f6;
+      background: var(--bg-primary);
+      color: var(--text-primary);
       min-height: 100vh;
       overscroll-behavior: none;
       -webkit-user-select: none;
@@ -24,26 +39,48 @@
       justify-content: center;
       min-height: 100vh;
       padding: 1.5rem;
+      background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
     }
     #pin-screen.hidden { display: none; }
     
     .pin-container {
-      background: white;
-      border-radius: 1rem;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-      padding: 2rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 1.5rem;
+      padding: 2.5rem 2rem;
       width: 100%;
-      max-width: 20rem;
+      max-width: 22rem;
       text-align: center;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
     }
-    .pin-container h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
-    .pin-container p { color: #6b7280; margin-bottom: 1.5rem; }
+    
+    .logo {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--accent) 0%, #8b5cf6 100%);
+      border-radius: 1rem;
+      margin: 0 auto 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+    
+    .pin-container h1 { 
+      font-size: 1.75rem; 
+      font-weight: 700;
+      margin-bottom: 0.5rem; 
+    }
+    .pin-container p { 
+      color: var(--text-secondary); 
+      margin-bottom: 2rem; 
+    }
     
     .pin-inputs {
       display: flex;
       justify-content: center;
       gap: 0.75rem;
-      margin-bottom: 1rem;
+      margin-bottom: 1.5rem;
     }
     .pin-inputs input {
       width: 3.5rem;
@@ -51,125 +88,301 @@
       text-align: center;
       font-size: 1.75rem;
       font-weight: bold;
-      border: 2px solid #d1d5db;
+      background: var(--bg-primary);
+      border: 2px solid var(--border);
       border-radius: 0.75rem;
       outline: none;
+      color: var(--text-primary);
+      transition: all 0.2s;
     }
-    .pin-inputs input:focus { border-color: #3b82f6; }
+    .pin-inputs input:focus { 
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    }
     
-    .error { color: #ef4444; margin-bottom: 1rem; min-height: 1.5rem; }
+    .error { 
+      color: #ef4444; 
+      margin-bottom: 1rem; 
+      min-height: 1.5rem; 
+      font-size: 0.875rem;
+    }
     
     .btn {
       width: 100%;
-      padding: 1rem;
-      font-size: 1.125rem;
+      padding: 1rem 1.5rem;
+      font-size: 1rem;
       font-weight: 600;
       border: none;
       border-radius: 0.75rem;
       cursor: pointer;
-      transition: background 0.2s;
+      transition: all 0.2s;
     }
-    .btn-primary { background: #3b82f6; color: white; }
-    .btn-primary:hover { background: #2563eb; }
-    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { 
+      background: linear-gradient(135deg, var(--accent) 0%, #2563eb 100%);
+      color: white; 
+    }
+    .btn-primary:hover { 
+      transform: translateY(-1px);
+      box-shadow: 0 10px 20px -10px rgba(59, 130, 246, 0.5);
+    }
+    .btn-primary:disabled { 
+      opacity: 0.5; 
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
     
     /* Remote Control Screen */
     #remote-screen {
       display: none;
       flex-direction: column;
       height: 100vh;
+      height: 100dvh;
+      background: var(--bg-primary);
     }
     #remote-screen.active { display: flex; }
     
-    .preview {
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1rem 1.25rem;
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .header-title {
+      font-weight: 600;
+      font-size: 1rem;
+      color: var(--text-secondary);
+    }
+    
+    .slide-badge {
+      background: var(--accent);
+      color: white;
+      padding: 0.375rem 0.75rem;
+      border-radius: 2rem;
+      font-weight: 700;
+      font-size: 0.875rem;
+    }
+    
+    .animation-badge {
+      background: var(--bg-card);
+      color: var(--text-secondary);
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.5rem;
+      font-size: 0.75rem;
+      margin-left: 0.5rem;
+    }
+    
+    .main-content {
       flex: 1;
+      overflow-y: auto;
       padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .slide-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 1rem;
       overflow: hidden;
+    }
+    
+    .slide-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.75rem 1rem;
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .slide-card-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+    }
+    
+    .slide-card-number {
+      font-weight: 700;
+      color: var(--accent);
+    }
+    
+    .slide-preview {
+      aspect-ratio: 16/9;
+      background: var(--bg-primary);
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
     }
-    .preview img {
-      max-width: 100%;
-      max-height: 100%;
+    
+    .slide-preview img {
+      width: 100%;
+      height: 100%;
       object-fit: contain;
-      background: #1f2937;
-      border-radius: 0.75rem;
     }
-    .preview .placeholder {
+    
+    .slide-preview .placeholder {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
-      border-radius: 0.75rem;
-      color: white;
-    }
-    .preview .placeholder .slide-num {
-      font-size: 4rem;
-      font-weight: bold;
-      opacity: 0.8;
-    }
-    .preview .placeholder .slide-label {
-      font-size: 1rem;
-      opacity: 0.6;
-      margin-top: 0.5rem;
+      color: var(--text-muted);
     }
     
-    .view-toggle {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-      padding: 0 1rem;
+    .placeholder-icon {
+      font-size: 3rem;
+      margin-bottom: 0.5rem;
     }
-    .view-toggle button {
-      padding: 0.5rem 1rem;
-      font-weight: 500;
-      border: none;
-      border-radius: 0.5rem;
-      cursor: pointer;
-      background: white;
-      color: #4b5563;
-    }
-    .view-toggle button.active { background: #3b82f6; color: white; }
     
-    .slide-counter {
-      text-align: center;
-      padding: 0.75rem;
-      font-size: 1.5rem;
-      font-weight: bold;
+    .placeholder-text {
+      font-size: 0.875rem;
+    }
+    
+    .notes-section {
+      padding: 1rem;
+      border-top: 1px solid var(--border);
+      max-height: 120px;
+      overflow-y: auto;
+    }
+    
+    .notes-label {
+      font-size: 0.625rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-muted);
+      margin-bottom: 0.5rem;
+    }
+    
+    .notes-content {
+      font-size: 0.875rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+    
+    .notes-content.empty {
+      font-style: italic;
+      color: var(--text-muted);
+    }
+    
+    .current-card {
+      flex-shrink: 0;
+    }
+    
+    .next-card {
+      flex-shrink: 0;
+      opacity: 0.85;
+    }
+    
+    .next-card .slide-card-label {
+      color: var(--success);
+    }
+    
+    .next-card .slide-preview {
+      aspect-ratio: 16/9;
+    }
+    
+    .nav-section {
+      padding: 1rem;
+      padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+      background: var(--bg-secondary);
+      border-top: 1px solid var(--border);
     }
     
     .nav-buttons {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 0.75rem;
-      padding: 1rem;
-      padding-bottom: 2rem;
     }
-    .nav-buttons button {
-      padding: 1.5rem;
-      font-size: 1.25rem;
+    
+    .nav-btn {
+      padding: 1.25rem;
+      font-size: 1rem;
       font-weight: 600;
       border: none;
       border-radius: 0.75rem;
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      transition: all 0.2s;
     }
-    .nav-buttons button:disabled { opacity: 0.3; }
-    .btn-prev { background: #1f2937; color: white; }
-    .btn-prev:active { background: #374151; }
-    .btn-next { background: #2563eb; color: white; }
-    .btn-next:active { background: #1d4ed8; }
+    
+    .nav-btn:disabled { 
+      opacity: 0.3;
+      cursor: not-allowed;
+    }
+    
+    .nav-btn:active:not(:disabled) {
+      transform: scale(0.98);
+    }
+    
+    .btn-prev { 
+      background: var(--bg-card);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+    }
+    .btn-prev:active:not(:disabled) { 
+      background: var(--border);
+    }
+    
+    .btn-next { 
+      background: linear-gradient(135deg, var(--accent) 0%, #2563eb 100%);
+      color: white;
+    }
+    .btn-next:active:not(:disabled) { 
+      background: var(--accent-hover);
+    }
+    
+    .nav-icon {
+      font-size: 1.25rem;
+    }
+    
+    /* End of presentation state */
+    .end-state {
+      text-align: center;
+      padding: 2rem;
+    }
+    
+    .end-icon {
+      width: 64px;
+      height: 64px;
+      background: linear-gradient(135deg, var(--success) 0%, #16a34a 100%);
+      border-radius: 50%;
+      margin: 0 auto 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+    
+    .end-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+    
+    .end-subtitle {
+      color: var(--text-muted);
+      font-size: 0.875rem;
+    }
   </style>
 </head>
 <body>
   <!-- PIN Entry Screen -->
   <div id="pin-screen">
     <div class="pin-container">
+      <div class="logo">📊</div>
       <h1>SlideCue</h1>
-      <p>Enter the 4-digit PIN</p>
+      <p>Enter the 4-digit PIN to connect</p>
       <div class="pin-inputs">
         <input type="text" inputmode="numeric" maxlength="1" data-index="0" autofocus />
         <input type="text" inputmode="numeric" maxlength="1" data-index="1" />
@@ -183,23 +396,74 @@
   
   <!-- Remote Control Screen -->
   <div id="remote-screen">
-    <div class="preview" id="preview-container">
-      <img id="slide-img" src="" alt="Slide Preview" style="display:none;" />
-      <div class="placeholder" id="slide-placeholder">
-        <div class="slide-num" id="preview-num">1</div>
-        <div class="slide-label" id="preview-label">Next Slide</div>
+    <div class="header">
+      <span class="header-title">SlideCue Remote</span>
+      <div>
+        <span class="slide-badge" id="slide-counter">1 / 1</span>
+        <span class="animation-badge" id="animation-badge" style="display:none;">⚡ 0/0</span>
       </div>
     </div>
-    <div class="view-toggle">
-      <button id="btn-current">Current</button>
-      <button id="btn-next" class="active">Next</button>
+    
+    <div class="main-content">
+      <!-- Current Slide Card -->
+      <div class="slide-card current-card">
+        <div class="slide-card-header">
+          <span class="slide-card-label">Current Slide</span>
+          <span class="slide-card-number" id="current-slide-num">1</span>
+        </div>
+        <div class="slide-preview" id="current-preview">
+          <img id="current-img" src="" alt="Current slide" style="display:none;" />
+          <div class="placeholder" id="current-placeholder">
+            <div class="placeholder-icon">📄</div>
+            <div class="placeholder-text">Loading...</div>
+          </div>
+        </div>
+        <div class="notes-section">
+          <div class="notes-label">Speaker Notes</div>
+          <div class="notes-content" id="current-notes">No notes for this slide</div>
+        </div>
+      </div>
+      
+      <!-- Next Slide Card -->
+      <div class="slide-card next-card" id="next-card">
+        <div class="slide-card-header">
+          <span class="slide-card-label">Up Next</span>
+          <span class="slide-card-number" id="next-slide-num">2</span>
+        </div>
+        <div class="slide-preview" id="next-preview">
+          <img id="next-img" src="" alt="Next slide" style="display:none;" />
+          <div class="placeholder" id="next-placeholder">
+            <div class="placeholder-icon">📄</div>
+            <div class="placeholder-text">Loading...</div>
+          </div>
+        </div>
+        <div class="notes-section">
+          <div class="notes-label">Coming Up</div>
+          <div class="notes-content" id="next-notes">No notes for next slide</div>
+        </div>
+      </div>
+      
+      <!-- End of presentation -->
+      <div class="slide-card next-card" id="end-card" style="display:none;">
+        <div class="end-state">
+          <div class="end-icon">✓</div>
+          <div class="end-title">End of Presentation</div>
+          <div class="end-subtitle">You've reached the last slide</div>
+        </div>
+      </div>
     </div>
-    <div class="slide-counter">
-      <span id="current-slide">1</span> / <span id="total-slides">1</span>
-    </div>
-    <div class="nav-buttons">
-      <button class="btn-prev" id="prev-btn">← Previous</button>
-      <button class="btn-next" id="next-btn">Next →</button>
+    
+    <div class="nav-section">
+      <div class="nav-buttons">
+        <button class="nav-btn btn-prev" id="prev-btn">
+          <span class="nav-icon">←</span>
+          <span>Previous</span>
+        </button>
+        <button class="nav-btn btn-next" id="next-btn">
+          <span>Next</span>
+          <span class="nav-icon">→</span>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -209,20 +473,36 @@
     const pinInputs = document.querySelectorAll('.pin-inputs input');
     const connectBtn = document.getElementById('connect-btn');
     const errorEl = document.getElementById('error');
-    const slideImg = document.getElementById('slide-img');
-    const slidePlaceholder = document.getElementById('slide-placeholder');
-    const previewNum = document.getElementById('preview-num');
-    const previewLabel = document.getElementById('preview-label');
-    const currentSlideEl = document.getElementById('current-slide');
-    const totalSlidesEl = document.getElementById('total-slides');
+    
+    const slideCounter = document.getElementById('slide-counter');
+    const animationBadge = document.getElementById('animation-badge');
+    const currentSlideNum = document.getElementById('current-slide-num');
+    const nextSlideNum = document.getElementById('next-slide-num');
+    
+    const currentImg = document.getElementById('current-img');
+    const currentPlaceholder = document.getElementById('current-placeholder');
+    const currentNotes = document.getElementById('current-notes');
+    
+    const nextCard = document.getElementById('next-card');
+    const nextImg = document.getElementById('next-img');
+    const nextPlaceholder = document.getElementById('next-placeholder');
+    const nextNotes = document.getElementById('next-notes');
+    const endCard = document.getElementById('end-card');
+    
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
-    const btnCurrent = document.getElementById('btn-current');
-    const btnNext = document.getElementById('btn-next');
     
     let socket = null;
-    let slideInfo = { currentSlide: 1, totalSlides: 1, animationStep: 0, animationsOnSlide: 0, nextVisibleSlide: 2, isLastSlide: false };
-    let viewMode = 'next';
+    let slideInfo = { 
+      currentSlide: 1, 
+      totalSlides: 1, 
+      animationStep: 0, 
+      animationsOnSlide: 0, 
+      nextVisibleSlide: 2, 
+      isLastSlide: false,
+      currentNotes: '',
+      nextNotes: ''
+    };
     
     // PIN input handling
     pinInputs.forEach((input, index) => {
@@ -238,6 +518,9 @@
       input.addEventListener('keydown', (e) => {
         if (e.key === 'Backspace' && !e.target.value && index > 0) {
           pinInputs[index - 1].focus();
+        }
+        if (e.key === 'Enter' && getPin().length === 4) {
+          connect();
         }
       });
     });
@@ -270,7 +553,7 @@
       });
       
       socket.on('connect_error', () => {
-        errorEl.textContent = 'Invalid PIN';
+        errorEl.textContent = 'Invalid PIN. Please try again.';
         connectBtn.disabled = false;
         connectBtn.textContent = 'Connect';
         socket.close();
@@ -283,7 +566,7 @@
       });
       
       socket.on('disconnect', () => {
-        errorEl.textContent = 'Disconnected';
+        errorEl.textContent = 'Connection lost. Please reconnect.';
         pinScreen.classList.remove('hidden');
         remoteScreen.classList.remove('active');
         connectBtn.disabled = false;
@@ -291,52 +574,80 @@
       });
     }
     
+    function loadImage(imgEl, placeholderEl, slideNum, fallbackText) {
+      if (!slideNum) {
+        imgEl.style.display = 'none';
+        placeholderEl.style.display = 'flex';
+        placeholderEl.innerHTML = `
+          <div class="placeholder-icon">📄</div>
+          <div class="placeholder-text">${fallbackText}</div>
+        `;
+        return;
+      }
+      
+      const imgUrl = `/thumbnails/slide_${String(slideNum).padStart(3, '0')}.png?t=${Date.now()}`;
+      imgEl.onload = () => {
+        imgEl.style.display = 'block';
+        placeholderEl.style.display = 'none';
+      };
+      imgEl.onerror = () => {
+        imgEl.style.display = 'none';
+        placeholderEl.style.display = 'flex';
+        placeholderEl.innerHTML = `
+          <div class="placeholder-icon">🔒</div>
+          <div class="placeholder-text">Hidden Slide ${slideNum}</div>
+        `;
+      };
+      imgEl.src = imgUrl;
+    }
+    
     function updateUI() {
-      // Show current slide number and total
-      currentSlideEl.textContent = slideInfo.currentSlide;
-      totalSlidesEl.textContent = slideInfo.totalSlides;
+      // Update header
+      slideCounter.textContent = `${slideInfo.currentSlide} / ${slideInfo.totalSlides}`;
       
-      // Calculate which slide to preview
-      // For "next" view, use nextVisibleSlide (skips hidden slides)
-      const previewSlide = viewMode === 'current' 
-        ? slideInfo.currentSlide 
-        : slideInfo.nextVisibleSlide;
-      
-      // Update placeholder text
-      previewNum.textContent = previewSlide || '✓';
-      previewLabel.textContent = viewMode === 'current' ? 'Current Slide' : 'Next Slide';
-      
-      // Show animation indicator if there are animations
+      // Animation badge
       if (slideInfo.animationsOnSlide > 0) {
-        const animText = ` (${slideInfo.animationStep}/${slideInfo.animationsOnSlide})`;
-        if (viewMode === 'current') {
-          previewLabel.textContent = 'Current Slide' + animText;
+        animationBadge.style.display = 'inline';
+        animationBadge.textContent = `⚡ ${slideInfo.animationStep}/${slideInfo.animationsOnSlide}`;
+      } else {
+        animationBadge.style.display = 'none';
+      }
+      
+      // Current slide
+      currentSlideNum.textContent = slideInfo.currentSlide;
+      loadImage(currentImg, currentPlaceholder, slideInfo.currentSlide, 'Loading...');
+      
+      // Current notes
+      if (slideInfo.currentNotes && slideInfo.currentNotes.trim()) {
+        currentNotes.textContent = slideInfo.currentNotes;
+        currentNotes.classList.remove('empty');
+      } else {
+        currentNotes.textContent = 'No speaker notes for this slide';
+        currentNotes.classList.add('empty');
+      }
+      
+      // Next slide / End state
+      if (slideInfo.isLastSlide) {
+        nextCard.style.display = 'none';
+        endCard.style.display = 'block';
+      } else {
+        nextCard.style.display = 'block';
+        endCard.style.display = 'none';
+        
+        nextSlideNum.textContent = slideInfo.nextVisibleSlide || '—';
+        loadImage(nextImg, nextPlaceholder, slideInfo.nextVisibleSlide, 'No next slide');
+        
+        // Next notes
+        if (slideInfo.nextNotes && slideInfo.nextNotes.trim()) {
+          nextNotes.textContent = slideInfo.nextNotes;
+          nextNotes.classList.remove('empty');
+        } else {
+          nextNotes.textContent = 'No speaker notes for next slide';
+          nextNotes.classList.add('empty');
         }
       }
       
-      // If last slide and viewing "next", show "End"
-      if (viewMode === 'next' && slideInfo.isLastSlide) {
-        previewNum.textContent = '✓';
-        previewLabel.textContent = 'End of Presentation';
-        slideImg.style.display = 'none';
-        slidePlaceholder.style.display = 'flex';
-      } else if (previewSlide) {
-        // Try to load the slide image (use actual slide number for filename)
-        const imgUrl = `/thumbnails/slide_${String(previewSlide).padStart(3, '0')}.png?t=${Date.now()}`;
-        slideImg.onload = () => {
-          slideImg.style.display = 'block';
-          slidePlaceholder.style.display = 'none';
-        };
-        slideImg.onerror = () => {
-          // Image not found (might be a hidden slide) - show placeholder
-          slideImg.style.display = 'none';
-          slidePlaceholder.style.display = 'flex';
-          previewLabel.textContent = viewMode === 'current' ? 'Current Slide (Hidden)' : 'Next Slide (Hidden)';
-        };
-        slideImg.src = imgUrl;
-      }
-      
-      // Disable buttons appropriately
+      // Button states
       prevBtn.disabled = slideInfo.currentSlide <= 1 && slideInfo.animationStep === 0;
       nextBtn.disabled = slideInfo.isLastSlide && slideInfo.animationStep >= slideInfo.animationsOnSlide;
     }
@@ -344,18 +655,17 @@
     prevBtn.addEventListener('click', () => socket?.emit('prev'));
     nextBtn.addEventListener('click', () => socket?.emit('next'));
     
-    btnCurrent.addEventListener('click', () => {
-      viewMode = 'current';
-      btnCurrent.classList.add('active');
-      btnNext.classList.remove('active');
-      updateUI();
-    });
-    
-    btnNext.addEventListener('click', () => {
-      viewMode = 'next';
-      btnNext.classList.add('active');
-      btnCurrent.classList.remove('active');
-      updateUI();
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+      if (!socket || pinScreen.classList.contains('hidden') === false) return;
+      
+      if (e.key === 'ArrowRight' || e.key === ' ') {
+        e.preventDefault();
+        socket.emit('next');
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        socket.emit('prev');
+      }
     });
   </script>
 </body>
