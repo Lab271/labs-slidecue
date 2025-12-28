@@ -113,21 +113,74 @@ export default function App() {
 
   if (state === 'importing' && importProgress) {
     const percentage = Math.round((importProgress.step / importProgress.total) * 100);
+    const steps = [
+      { label: 'Starting', icon: '🚀' },
+      { label: 'Opening', icon: '📂' },
+      { label: 'Analyzing', icon: '🔍' },
+      { label: 'Converting', icon: '⚙️' },
+      { label: 'Finishing', icon: '✨' },
+    ];
+    const currentStepIndex = Math.min(Math.floor(importProgress.step), steps.length - 1);
+    
     return (
-      <div className="flex flex-col items-center justify-center h-screen bg-gray-900 gap-6 p-8">
-        <div className="text-6xl mb-4">📊</div>
-        <h1 className="text-3xl font-bold text-white">Converting Presentation</h1>
-        <p className="text-gray-400 text-lg">{importProgress.message}</p>
-        
-        <div className="w-80 bg-gray-700 rounded-full h-4 overflow-hidden">
-          <div 
-            className="bg-blue-500 h-full transition-all duration-300 ease-out"
-            style={{ width: `${percentage}%` }}
-          />
+      <div className="flex flex-col items-center justify-center h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 gap-8 p-8">
+        {/* Animated logo/icon */}
+        <div className="relative">
+          <div className="text-7xl animate-bounce">{steps[currentStepIndex].icon}</div>
+          <div className="absolute -inset-4 bg-blue-500/20 rounded-full blur-xl animate-pulse"></div>
         </div>
         
-        <p className="text-gray-500">
-          Step {Math.ceil(importProgress.step)} of {importProgress.total}
+        {/* Title */}
+        <div className="text-center">
+          <h1 className="text-4xl font-bold text-white mb-2">Preparing Your Slides</h1>
+          <p className="text-blue-400 text-lg font-medium">{importProgress.message}</p>
+        </div>
+        
+        {/* Progress bar */}
+        <div className="w-96 max-w-full">
+          <div className="bg-gray-700/50 rounded-full h-3 overflow-hidden backdrop-blur-sm border border-gray-600/30">
+            <div 
+              className="bg-gradient-to-r from-blue-500 via-blue-400 to-cyan-400 h-full transition-all duration-500 ease-out relative"
+              style={{ width: `${percentage}%` }}
+            >
+              <div className="absolute inset-0 bg-white/20 animate-pulse"></div>
+            </div>
+          </div>
+          <div className="flex justify-between mt-2 text-sm text-gray-500">
+            <span>{percentage}%</span>
+            <span>Step {Math.ceil(importProgress.step)} of {importProgress.total}</span>
+          </div>
+        </div>
+        
+        {/* Step indicators */}
+        <div className="flex gap-3 mt-4">
+          {steps.map((step, i) => (
+            <div 
+              key={i}
+              className={`flex flex-col items-center transition-all duration-300 ${
+                i <= currentStepIndex ? 'opacity-100' : 'opacity-30'
+              }`}
+            >
+              <div className={`w-10 h-10 rounded-full flex items-center justify-center text-lg
+                ${i < currentStepIndex 
+                  ? 'bg-green-500/20 border-2 border-green-500' 
+                  : i === currentStepIndex 
+                    ? 'bg-blue-500/20 border-2 border-blue-500 animate-pulse' 
+                    : 'bg-gray-700/50 border-2 border-gray-600'
+                }`}
+              >
+                {i < currentStepIndex ? '✓' : step.icon}
+              </div>
+              <span className={`text-xs mt-1 ${i <= currentStepIndex ? 'text-gray-300' : 'text-gray-600'}`}>
+                {step.label}
+              </span>
+            </div>
+          ))}
+        </div>
+        
+        {/* Subtle hint */}
+        <p className="text-gray-600 text-sm mt-8">
+          This may take a moment for large presentations...
         </p>
       </div>
     );
