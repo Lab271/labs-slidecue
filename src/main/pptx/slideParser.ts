@@ -83,19 +83,58 @@ export async function parsePresentationData(pptxPath: string): Promise<Presentat
           name = titleMatch[1].substring(0, 50);
         }
         
-        // Try to get notes
+        // Try to get notes by looking up the relationship file first
         let notes = '';
         try {
-          const notesFile = slideFile.replace('slides/slide', 'notesSlides/notesSlide');
-          const { stdout: notesXml } = await execAsync(
-            `unzip -p "${pptxPath}" "${notesFile}" 2>/dev/null`
+          // Get the slide's relationship file to find the actual notes file
+          const slideRelsFile = slideFile.replace('slides/', 'slides/_rels/').replace('.xml', '.xml.rels');
+          const { stdout: relsXml } = await execAsync(
+            `unzip -p "${pptxPath}" "${slideRelsFile}" 2>/dev/null`
           );
-          const notesText = notesXml.match(/<a:t>([^<]+)<\/a:t>/g);
-          if (notesText) {
-            notes = notesText.map(t => t.replace(/<\/?a:t>/g, '')).join(' ').substring(0, 200);
+          
+          // Find the notesSlide relationship
+          const notesMatch = relsXml.match(/Type="[^"]*notesSlide"[^>]*Target="([^"]+)"/);
+          
+          if (notesMatch && notesMatch[1]) {
+            // Target is relative like "../notesSlides/notesSlide2.xml"
+            const notesTarget = notesMatch[1];
+            const notesFile = 'ppt/' + notesTarget.replace('../', '');
+            
+            console.log(`Slide ${slideNum} notes file: ${notesFile}`);
+            
+            const { stdout: notesXml } = await execAsync(
+              `unzip -p "${pptxPath}" "${notesFile}" 2>/dev/null`
+            );
+            
+            // The notes are in the shape with <p:ph type="body"/>
+            const bodyMatch = notesXml.match(/<p:sp>.*?<p:ph type="body"[^>]*\/>.*?<p:txBody>(.*?)<\/p:txBody>.*?<\/p:sp>/s);
+            
+            if (bodyMatch && bodyMatch[1]) {
+              const txBody = bodyMatch[1];
+              // Extract all <a:t> text content
+              const textMatches = txBody.match(/<a:t>([^<]*)<\/a:t>/g) || [];
+              const textParts: string[] = [];
+              
+              for (const match of textMatches) {
+                const text = match.replace(/<\/?a:t>/g, '');
+                textParts.push(text);
+              }
+              
+              notes = textParts.join('').trim();
+            }
+            
+            // Limit to reasonable length
+            if (notes.length > 1000) {
+              notes = notes.substring(0, 1000) + '...';
+            }
+            
+            console.log(`Slide ${slideNum} notes: "${notes}"`);
+          } else {
+            console.log(`Slide ${slideNum}: no notes relationship found`);
           }
-        } catch {
-          // No notes
+        } catch (e) {
+          // No notes for this slide
+          console.log(`Slide ${slideNum}: no notes file`);
         }
         
         const slideData: SlideData = {
