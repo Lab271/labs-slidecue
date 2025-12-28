@@ -246,46 +246,35 @@ export default function App() {
         {presentation ? (
           <div>
             <p className="text-gray-600 mb-4">
-              {presentation.fileName} • {presentation.visibleSlideCount} visible slide{presentation.visibleSlideCount !== 1 ? 's' : ''}
+              {presentation.fileName} • {presentation.thumbnails.length} slide{presentation.thumbnails.length !== 1 ? 's' : ''}
               {presentation.hiddenSlides.length > 0 && (
-                <span className="text-gray-400"> ({presentation.hiddenSlides.length} hidden)</span>
+                <span className="text-gray-400"> ({presentation.hiddenSlides.length} hidden, not shown)</span>
               )}
             </p>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {presentation.thumbnails.map((thumb, i) => {
-                const isHidden = presentation.hiddenSlides.includes(i + 1);
-                return (
-                  <div
-                    key={i}
-                    className={`bg-white border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow ${isHidden ? 'opacity-50' : ''}`}
-                  >
-                    <div className="relative w-full aspect-video bg-gray-100">
-                      <img
-                        src={`file://${thumb}`}
-                        alt={`Slide ${i + 1}`}
-                        className="w-full h-full object-contain"
-                        onError={(e) => {
-                          (e.target as HTMLImageElement).style.display = 'none';
-                        }}
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800 -z-10">
-                        <span className="text-4xl font-bold text-white/70">{i + 1}</span>
-                      </div>
-                      {isHidden && (
-                        <div className="absolute top-2 right-2 bg-gray-900/80 text-white text-xs px-2 py-1 rounded flex items-center gap-1">
-                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                          </svg>
-                          Hidden
-                        </div>
-                      )}
+              {presentation.thumbnails.map((thumb, i) => (
+                <div
+                  key={i}
+                  className="bg-white border rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="relative w-full aspect-video bg-gray-100">
+                    <img
+                      src={`file://${thumb}`}
+                      alt={`Slide ${i + 1}`}
+                      className="w-full h-full object-contain"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).style.display = 'none';
+                      }}
+                    />
+                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-700 to-gray-800 -z-10">
+                      <span className="text-4xl font-bold text-white/70">{i + 1}</span>
                     </div>
-                    <p className="text-center py-2 text-sm text-gray-600 bg-gray-50">
-                      Slide {i + 1}{isHidden && ' (hidden)'}
-                    </p>
                   </div>
-                );
-              })}
+                  <p className="text-center py-2 text-sm text-gray-600 bg-gray-50">
+                    Slide {i + 1}
+                  </p>
+                </div>
+              ))}
             </div>
           </div>
         ) : (

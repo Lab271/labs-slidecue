@@ -138,7 +138,7 @@ end tell
     }
     
     // Find all generated PNG files
-    const thumbnails: string[] = [];
+    let allThumbnails: string[] = [];
     try {
       const files = await readdir(outputDir);
       const pngs = files
@@ -146,21 +146,33 @@ end tell
         .sort();
       
       for (const png of pngs) {
-        thumbnails.push(join(outputDir, png));
+        allThumbnails.push(join(outputDir, png));
       }
     } catch {
       // Ignore
     }
     
-    console.log('Generated thumbnails:', thumbnails);
+    console.log('Generated thumbnails (all):', allThumbnails);
     
-    // Return metadata including hidden slide info
+    // Filter out hidden slide thumbnails for the visible-only list
+    const visibleThumbnails = allThumbnails.filter((_, index) => {
+      const slideNum = index + 1; // 1-based slide number
+      return !hiddenSlides.includes(slideNum);
+    });
+    
+    console.log('Visible thumbnails:', visibleThumbnails);
+    console.log('Hidden slides:', hiddenSlides);
+    
+    // Update counts based on actual generated thumbnails
+    const actualTotalSlides = allThumbnails.length;
+    const actualVisibleCount = visibleThumbnails.length;
+    
+    // Return metadata - only include visible thumbnails
     const result: SlideMetadata = {
-      thumbnails: thumbnails.length > 0 ? thumbnails : 
-        Array.from({ length: totalSlides }, (_, i) => `slide_${String(i + 1).padStart(3, '0')}.png`),
-      totalSlides,
+      thumbnails: visibleThumbnails,
+      totalSlides: actualTotalSlides,
       hiddenSlides,
-      visibleSlideCount,
+      visibleSlideCount: actualVisibleCount,
     };
     
     return result;
