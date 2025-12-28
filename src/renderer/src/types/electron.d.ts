@@ -1,3 +1,9 @@
+// Allow importing PNG files
+declare module '*.png' {
+  const value: string;
+  export default value;
+}
+
 interface ElectronAPI {
   checkPowerPoint: () => Promise<boolean>;
   importPresentation: () => Promise<{
@@ -5,6 +11,8 @@ interface ElectronAPI {
     fileName: string;
     thumbnails: string[];
     totalSlides: number;
+    visibleSlides: number[];
+    hiddenSlides: number[];
   } | null>;
   startPresentation: () => Promise<{ url: string; pin: string }>;
   stopPresentation: () => Promise<void>;

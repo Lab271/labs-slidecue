@@ -1,114 +1,105 @@
 # SlideCue
 
-A PowerPoint presentation remote control app built with Electron.
+Control PowerPoint presentations from any device on your network.
 
-**Control your PowerPoint presentations from any device on your network.**
-
-![Status](https://img.shields.io/badge/status-in%20development-yellow)
-![Platform](https://img.shields.io/badge/platform-Windows-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+<p align="center">
+  <img src="icon/icon_final.png" alt="SlideCue" width="200" />
+</p>
 
 ## Features
 
-- 📂 **Import PPTX** — Select any PowerPoint file and preview all slides as thumbnails
-- 🎬 **Present with Full Animations** — Launches native PowerPoint in slideshow mode (all animations and transitions preserved)
-- 📱 **Web Remote Control** — Any device on your local network can control the presentation
-- 🔐 **PIN Security** — 4-digit PIN protects against unauthorized access
--  **Slide Preview** — See current or next slide on the remote device
-- 🔄 **Auto-Updates** — App updates automatically from GitHub Releases
+- 🎯 **Remote Control** — Control your presentation from your phone or tablet
+- 📱 **QR Code Login** — Scan to connect instantly, no typing required
+- 📝 **Speaker Notes** — View notes for current and upcoming slides
+- ⏱️ **Timer** — Track elapsed time during your presentation
+- 🔒 **PIN Protected** — Secure 4-digit PIN for each session
+- 🌙 **Dark Theme** — Easy on the eyes in any lighting
 
 ## Requirements
 
-- **Microsoft PowerPoint** must be installed on the presentation machine
-- **Windows 10/11** (deployment target)
-- macOS supported for development
-
-## Installation
-
-### Download (Recommended)
-
-Download the latest `.exe` installer from [GitHub Releases](https://github.com/yourusername/slidecue/releases).
-
-### Build from Source
+### macOS
+- Microsoft PowerPoint (tested with Microsoft 365)
+- LibreOffice (for thumbnail generation)
+- Poppler (for PDF to image conversion)
 
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/slidecue.git
-cd slidecue
+# Install dependencies
+brew install --cask libreoffice
+brew install poppler
+```
 
+## Getting Started
+
+### Development
+
+```bash
 # Install dependencies
 npm install
 
 # Run in development mode
 npm run dev
 
-# Build Windows installer
-npm run make
-```
-
-## Usage
-
-1. **Launch SlideCue** — The app checks if PowerPoint is installed
-2. **Import a PPTX** — Click "Import" and select your PowerPoint file
-3. **Preview Slides** — Thumbnails are generated for all slides
-4. **Start Presenting** — Click "Present" to launch the slideshow
-5. **Connect Remote** — Enter the URL shown on screen on your phone
-6. **Enter PIN** — Type the 4-digit PIN shown on screen
-7. **Control** — Use Previous/Next buttons to navigate slides
-
-## Remote Interface
-
-The web remote provides:
-
-- **Previous / Next** buttons for slide navigation
-- **Current / Next Slide** toggle to preview what's coming
-- **Slide Counter** showing current position (e.g., "5 / 20")
-
-## Technology Stack
-
-- **Electron** — Cross-platform desktop app framework
-- **React + TypeScript** — UI components
-- **Tailwind CSS** — Styling
-- **Express + Socket.IO** — Web server and real-time communication
-- **winax** — Windows COM automation for PowerPoint control
-- **AppleScript** — macOS PowerPoint control (development)
-- **Electron Forge** — Packaging and distribution
-
-## Development
-
-```bash
-# Start development server with hot reload
-npm run dev
-
-# Type check
-npm run typecheck
-
-# Lint
-npm run lint
-
 # Build for production
 npm run build
 
-# Create Windows installer
-npm run make
+# Start production build
+npm start
 ```
 
-## Architecture
+### Usage
 
-See [ARCHITECTURE.md](./ARCHITECTURE.md) for technical details.
+1. **Import** — Click "Import PPTX" and select your presentation
+2. **Wait** — Thumbnails are generated (may take a moment for large files)
+3. **Present** — Click "Present" to start the slideshow
+4. **Connect** — Scan the QR code or enter the URL and PIN on your phone
+5. **Control** — Use the remote to navigate slides
 
-## Implementation Guide
+## Remote Controls
 
-See [IMPLEMENTATION.md](./IMPLEMENTATION.md) for step-by-step build instructions.
+| Action | Button | Keyboard |
+|--------|--------|----------|
+| Next slide/animation | Next → | Arrow Right, Space |
+| Previous slide | ← Prev | Arrow Left |
+| Go to specific slide | 🎯 Go to Slide | G |
+| Close overview | — | Escape |
+
+## How It Works
+
+1. **PPTX Parsing** — Extracts slide count, notes, and hidden slide info
+2. **Thumbnail Generation** — LibreOffice converts to PDF, pdftoppm creates PNGs
+3. **PowerPoint Control** — AppleScript commands control the native app
+4. **Web Server** — Express serves the remote UI on your local network
+5. **Real-time Sync** — Socket.IO keeps all connected devices in sync
+
+## Project Structure
+
+```
+src/
+├── main/           # Electron main process
+│   ├── pptx/       # PowerPoint automation
+│   └── server/     # Express + Socket.IO
+├── preload/        # IPC bridge
+└── renderer/       # Desktop UI (React)
+
+resources/
+└── remote/         # Web remote UI
+```
+
+## Tech Stack
+
+- **Electron** — Desktop application framework
+- **React** — UI components
+- **Tailwind CSS** — Styling
+- **Socket.IO** — Real-time communication
+- **JSZip** — PPTX file parsing
+- **AppleScript** — PowerPoint automation (macOS)
 
 ## Roadmap
 
-See [TODO.md](./TODO.md) for the current task list.
-
-## Contributing
-
-Contributions are welcome! Please read the implementation guide first.
+- [ ] Windows support (COM automation)
+- [ ] Auto-updater
+- [ ] Packaged releases (.app, .exe)
 
 ## License
 
-MIT License — see [LICENSE](./LICENSE) for details.
+MIT

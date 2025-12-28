@@ -10,7 +10,7 @@ interface PresentationInfo {
   fileName: string;
   thumbnails: string[];
   totalSlides: number;
-  visibleSlideCount: number;
+  visibleSlides: number[];
   hiddenSlides: number[];
 }
 
