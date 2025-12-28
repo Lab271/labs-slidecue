@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+  <title>SlideCue Remote</title>
+  <script src="/socket.io/socket.io.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f3f4f6;
+      min-height: 100vh;
+      overscroll-behavior: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    
+    /* PIN Entry Screen */
+    #pin-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 1.5rem;
+    }
+    #pin-screen.hidden { display: none; }
+    
+    .pin-container {
+      background: white;
+      border-radius: 1rem;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+      padding: 2rem;
+      width: 100%;
+      max-width: 20rem;
+      text-align: center;
+    }
+    .pin-container h1 { font-size: 1.5rem; margin-bottom: 0.5rem; }
+    .pin-container p { color: #6b7280; margin-bottom: 1.5rem; }
+    
+    .pin-inputs {
+      display: flex;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+    }
+    .pin-inputs input {
+      width: 3.5rem;
+      height: 4rem;
+      text-align: center;
+      font-size: 1.75rem;
+      font-weight: bold;
+      border: 2px solid #d1d5db;
+      border-radius: 0.75rem;
+      outline: none;
+    }
+    .pin-inputs input:focus { border-color: #3b82f6; }
+    
+    .error { color: #ef4444; margin-bottom: 1rem; min-height: 1.5rem; }
+    
+    .btn {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1.125rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-primary { background: #3b82f6; color: white; }
+    .btn-primary:hover { background: #2563eb; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    /* Remote Control Screen */
+    #remote-screen {
+      display: none;
+      flex-direction: column;
+      height: 100vh;
+    }
+    #remote-screen.active { display: flex; }
+    
+    .preview {
+      flex: 1;
+      padding: 1rem;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .preview img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      background: #1f2937;
+      border-radius: 0.75rem;
+    }
+    .preview .placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+      border-radius: 0.75rem;
+      color: white;
+    }
+    .preview .placeholder .slide-num {
+      font-size: 4rem;
+      font-weight: bold;
+      opacity: 0.8;
+    }
+    .preview .placeholder .slide-label {
+      font-size: 1rem;
+      opacity: 0.6;
+      margin-top: 0.5rem;
+    }
+    
+    .view-toggle {
+      display: flex;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0 1rem;
+    }
+    .view-toggle button {
+      padding: 0.5rem 1rem;
+      font-weight: 500;
+      border: none;
+      border-radius: 0.5rem;
+      cursor: pointer;
+      background: white;
+      color: #4b5563;
+    }
+    .view-toggle button.active { background: #3b82f6; color: white; }
+    
+    .slide-counter {
+      text-align: center;
+      padding: 0.75rem;
+      font-size: 1.5rem;
+      font-weight: bold;
+    }
+    
+    .nav-buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.75rem;
+      padding: 1rem;
+      padding-bottom: 2rem;
+    }
+    .nav-buttons button {
+      padding: 1.5rem;
+      font-size: 1.25rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 0.75rem;
+      cursor: pointer;
+    }
+    .nav-buttons button:disabled { opacity: 0.3; }
+    .btn-prev { background: #1f2937; color: white; }
+    .btn-prev:active { background: #374151; }
+    .btn-next { background: #2563eb; color: white; }
+    .btn-next:active { background: #1d4ed8; }
+  </style>
+</head>
+<body>
+  <!-- PIN Entry Screen -->
+  <div id="pin-screen">
+    <div class="pin-container">
+      <h1>SlideCue</h1>
+      <p>Enter the 4-digit PIN</p>
+      <div class="pin-inputs">
+        <input type="text" inputmode="numeric" maxlength="1" data-index="0" autofocus />
+        <input type="text" inputmode="numeric" maxlength="1" data-index="1" />
+        <input type="text" inputmode="numeric" maxlength="1" data-index="2" />
+        <input type="text" inputmode="numeric" maxlength="1" data-index="3" />
+      </div>
+      <div class="error" id="error"></div>
+      <button class="btn btn-primary" id="connect-btn" disabled>Connect</button>
+    </div>
+  </div>
+  
+  <!-- Remote Control Screen -->
+  <div id="remote-screen">
+    <div class="preview" id="preview-container">
+      <img id="slide-img" src="" alt="Slide Preview" style="display:none;" />
+      <div class="placeholder" id="slide-placeholder">
+        <div class="slide-num" id="preview-num">1</div>
+        <div class="slide-label" id="preview-label">Next Slide</div>
+      </div>
+    </div>
+    <div class="view-toggle">
+      <button id="btn-current">Current</button>
+      <button id="btn-next" class="active">Next</button>
+    </div>
+    <div class="slide-counter">
+      <span id="current-slide">1</span> / <span id="total-slides">1</span>
+    </div>
+    <div class="nav-buttons">
+      <button class="btn-prev" id="prev-btn">← Previous</button>
+      <button class="btn-next" id="next-btn">Next →</button>
+    </div>
+  </div>
+
+  <script>
+    const pinScreen = document.getElementById('pin-screen');
+    const remoteScreen = document.getElementById('remote-screen');
+    const pinInputs = document.querySelectorAll('.pin-inputs input');
+    const connectBtn = document.getElementById('connect-btn');
+    const errorEl = document.getElementById('error');
+    const slideImg = document.getElementById('slide-img');
+    const slidePlaceholder = document.getElementById('slide-placeholder');
+    const previewNum = document.getElementById('preview-num');
+    const previewLabel = document.getElementById('preview-label');
+    const currentSlideEl = document.getElementById('current-slide');
+    const totalSlidesEl = document.getElementById('total-slides');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const btnCurrent = document.getElementById('btn-current');
+    const btnNext = document.getElementById('btn-next');
+    
+    let socket = null;
+    let slideInfo = { current: 1, total: 1 };
+    let viewMode = 'next';
+    
+    // PIN input handling
+    pinInputs.forEach((input, index) => {
+      input.addEventListener('input', (e) => {
+        const value = e.target.value.replace(/\D/g, '');
+        e.target.value = value;
+        if (value && index < 3) {
+          pinInputs[index + 1].focus();
+        }
+        updateConnectButton();
+      });
+      
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Backspace' && !e.target.value && index > 0) {
+          pinInputs[index - 1].focus();
+        }
+      });
+    });
+    
+    function getPin() {
+      return Array.from(pinInputs).map(i => i.value).join('');
+    }
+    
+    function updateConnectButton() {
+      connectBtn.disabled = getPin().length !== 4;
+    }
+    
+    connectBtn.addEventListener('click', connect);
+    
+    function connect() {
+      const pin = getPin();
+      if (pin.length !== 4) return;
+      
+      errorEl.textContent = '';
+      connectBtn.disabled = true;
+      connectBtn.textContent = 'Connecting...';
+      
+      socket = io(window.location.origin, {
+        auth: { pin }
+      });
+      
+      socket.on('connect', () => {
+        pinScreen.classList.add('hidden');
+        remoteScreen.classList.add('active');
+      });
+      
+      socket.on('connect_error', () => {
+        errorEl.textContent = 'Invalid PIN';
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Connect';
+        socket.close();
+        socket = null;
+      });
+      
+      socket.on('slide-changed', (info) => {
+        slideInfo = info;
+        updateUI();
+      });
+      
+      socket.on('disconnect', () => {
+        errorEl.textContent = 'Disconnected';
+        pinScreen.classList.remove('hidden');
+        remoteScreen.classList.remove('active');
+        connectBtn.disabled = false;
+        connectBtn.textContent = 'Connect';
+      });
+    }
+    
+    function updateUI() {
+      currentSlideEl.textContent = slideInfo.current;
+      totalSlidesEl.textContent = slideInfo.total;
+      
+      const previewSlide = viewMode === 'current' 
+        ? slideInfo.current 
+        : Math.min(slideInfo.current + 1, slideInfo.total);
+      
+      // Update placeholder text
+      previewNum.textContent = previewSlide;
+      previewLabel.textContent = viewMode === 'current' ? 'Current Slide' : 'Next Slide';
+      
+      // If last slide and viewing "next", show "End"
+      if (viewMode === 'next' && slideInfo.current >= slideInfo.total) {
+        previewNum.textContent = '✓';
+        previewLabel.textContent = 'End of Presentation';
+        slideImg.style.display = 'none';
+        slidePlaceholder.style.display = 'flex';
+      } else {
+        // Try to load the actual slide image
+        const imgUrl = `/thumbnails/slide_${String(previewSlide).padStart(3, '0')}.png?t=${Date.now()}`;
+        slideImg.onload = () => {
+          slideImg.style.display = 'block';
+          slidePlaceholder.style.display = 'none';
+        };
+        slideImg.onerror = () => {
+          slideImg.style.display = 'none';
+          slidePlaceholder.style.display = 'flex';
+        };
+        slideImg.src = imgUrl;
+      }
+      
+      prevBtn.disabled = slideInfo.current <= 1;
+      nextBtn.disabled = slideInfo.current >= slideInfo.total;
+    }
+    
+    prevBtn.addEventListener('click', () => socket?.emit('prev'));
+    nextBtn.addEventListener('click', () => socket?.emit('next'));
+    
+    btnCurrent.addEventListener('click', () => {
+      viewMode = 'current';
+      btnCurrent.classList.add('active');
+      btnNext.classList.remove('active');
+      updateUI();
+    });
+    
+    btnNext.addEventListener('click', () => {
+      viewMode = 'next';
+      btnNext.classList.add('active');
+      btnCurrent.classList.remove('active');
+      updateUI();
+    });
+  </script>
+</body>
+</html>

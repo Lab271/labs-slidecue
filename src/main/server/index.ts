@@ -1,0 +1,125 @@
+import express from 'express';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import { networkInterfaces } from 'os';
+import { readdir } from 'fs/promises';
+import { join } from 'path';
+
+let server: ReturnType<typeof createServer> | null = null;
+let io: Server | null = null;
+let currentPin: string = '';
+let thumbnailsDir: string = '';
+let currentPort: number = 3000;
+
+function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const testServer = createServer();
+    testServer.once('error', () => resolve(false));
+    testServer.once('listening', () => {
+      testServer.close();
+      resolve(true);
+    });
+    testServer.listen(port, '0.0.0.0');
+  });
+}
+
+async function findAvailablePort(startPort: number): Promise<number> {
+  let port = startPort;
+  while (!(await isPortAvailable(port))) {
+    port++;
+  }
+  return port;
+}
+
+export function getLocalIP(): string {
+  const nets = networkInterfaces();
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name] || []) {
+      if (net.family === 'IPv4' && !net.internal) {
+        return net.address;
+      }
+    }
+  }
+  return 'localhost';
+}
+
+export function generatePin(): string {
+  return Math.floor(1000 + Math.random() * 9000).toString();
+}
+
+export async function startServer(
+  remoteUIPath: string,
+  thumbsDir: string
+): Promise<{
+  url: string;
+  pin: string;
+  io: Server;
+}> {
+  const app = express();
+  server = createServer(app);
+  io = new Server(server, {
+    cors: { origin: '*' },
+  });
+
+  currentPin = generatePin();
+  thumbnailsDir = thumbsDir;
+  currentPort = await findAvailablePort(3000);
+
+  // Serve remote UI at root
+  app.use(express.static(remoteUIPath));
+
+  // Serve slide thumbnails
+  app.use('/thumbnails', express.static(thumbnailsDir));
+  
+  // API to list available thumbnails
+  app.get('/api/thumbnails', async (_req, res) => {
+    try {
+      const files = await readdir(thumbnailsDir);
+      const images = files
+        .filter(f => /\.(png|jpg|jpeg|gif)$/i.test(f))
+        .sort()
+        .map(f => `/thumbnails/${f}`);
+      console.log('API thumbnails:', images);
+      res.json({ thumbnails: images });
+    } catch (e) {
+      console.error('Error listing thumbnails:', e);
+      res.json({ thumbnails: [] });
+    }
+  });
+
+  // Socket.IO with PIN auth
+  io.use((socket, next) => {
+    const pin = socket.handshake.auth.pin;
+    if (pin === currentPin) {
+      next();
+    } else {
+      next(new Error('Invalid PIN'));
+    }
+  });
+
+  server.listen(currentPort, '0.0.0.0');
+
+  const localIP = getLocalIP();
+  return {
+    url: `http://${localIP}:${currentPort}`,
+    pin: currentPin,
+    io,
+  };
+}
+
+export function stopServer() {
+  if (io) {
+    io.close();
+    io = null;
+  }
+  if (server) {
+    server.close();
+    server = null;
+  }
+}
+
+export function broadcastSlideChange(current: number, total: number) {
+  if (io) {
+    io.emit('slide-changed', { current, total });
+  }
+}
