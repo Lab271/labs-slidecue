@@ -266,11 +266,11 @@ end tell
   async gotoSlide(slideNumber: number) {
     console.log(`Going to slide ${slideNumber}...`);
     
-    // Use AppleScript's go to first/last slide commands which work reliably,
-    // then navigate to the target slide
+    // PowerPoint's AppleScript "go to slide" command with a number parameter
+    // doesn't work (Dutch localization issue?), but go to first/last/next/previous work.
+    // We use a single AppleScript with a repeat loop for efficiency.
     try {
       if (slideNumber === 1) {
-        // Go to first slide - this works!
         await runAppleScript(`
 tell application "Microsoft PowerPoint"
   tell slide show view of slide show window 1
@@ -279,7 +279,6 @@ tell application "Microsoft PowerPoint"
 end tell
         `);
       } else if (slideNumber >= totalSlides) {
-        // Go to last slide
         await runAppleScript(`
 tell application "Microsoft PowerPoint"
   tell slide show view of slide show window 1
@@ -288,42 +287,24 @@ tell application "Microsoft PowerPoint"
 end tell
         `);
       } else {
-        // For middle slides: go to first, then advance to target
-        // This skips hidden slides automatically
+        // Go to first slide, then advance until we reach target position
+        // The repeat loop runs in a single AppleScript call for speed
         await runAppleScript(`
 tell application "Microsoft PowerPoint"
   tell slide show view of slide show window 1
     go to first slide
+    repeat until (current show position) ≥ ${slideNumber}
+      go to next slide
+    end repeat
   end tell
 end tell
         `);
-        
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Now advance slide by slide until we reach target
-        // We need to keep checking current position since hidden slides are skipped
-        let currentPos = await queryCurrentSlide();
-        let iterations = 0;
-        const maxIterations = totalSlides + 5; // Safety limit
-        
-        while (currentPos < slideNumber && iterations < maxIterations) {
-          await runAppleScript(`
-tell application "Microsoft PowerPoint"
-  tell slide show view of slide show window 1
-    go to next slide
-  end tell
-end tell
-          `);
-          await new Promise(resolve => setTimeout(resolve, 50));
-          currentPos = await queryCurrentSlide();
-          iterations++;
-        }
       }
     } catch (e) {
       console.error('Error in gotoSlide:', e);
     }
     
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 100));
     currentSlide = await queryCurrentSlide();
     currentAnimationStep = 0;
     console.log(`Now on slide ${currentSlide}`);

@@ -3,7 +3,8 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { networkInterfaces } from 'os';
 import { readdir } from 'fs/promises';
-import { join } from 'path';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 
 let server: ReturnType<typeof createServer> | null = null;
 let io: Server | null = null;
@@ -67,6 +68,14 @@ export async function startServer(
 
   // Serve remote UI at root
   app.use(express.static(remoteUIPath));
+
+  // Serve the app icon
+  app.get('/icon.png', (_req, res) => {
+    // In development, serve from resources folder
+    // In production, serve from app resources
+    const iconPath = join(process.cwd(), 'resources', 'icon.png');
+    res.sendFile(iconPath);
+  });
 
   // Serve slide thumbnails
   app.use('/thumbnails', express.static(thumbnailsDir));
