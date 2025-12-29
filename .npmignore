@@ -1,0 +1,36 @@
+# Source files
+src/
+
+# Config files
+electron.vite.config.ts
+forge.config.ts
+tsconfig.json
+tailwind.config.js
+postcss.config.js
+.eslintrc*
+
+# Documentation
+README.md
+TODO.md
+ARCHITECTURE.md
+LICENSE
+
+# Development
+.git/
+.github/
+node_modules/
+.vscode/
+.idea/
+
+# Build artifacts
+dist/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Other
+*.md
+!package.json
