@@ -37,14 +37,15 @@
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "resources/icon.icns",
+      "identity": null,
       "target": [
         {
           "target": "dmg",
-          "arch": ["x64", "arm64"]
+          "arch": ["universal"]
         },
         {
           "target": "zip",
-          "arch": ["x64", "arm64"]
+          "arch": ["universal"]
         }
       ]
     },

@@ -29,17 +29,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload DMG artifact
+      - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: macos-dmg
-          path: dist/*.dmg
-
-      - name: Upload ZIP artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: macos-zip
-          path: dist/*.zip
+          name: macos-files
+          path: |
+            dist/*.dmg
+            dist/*.zip
+            dist/latest-mac.yml
 
   build-windows:
     runs-on: windows-latest
@@ -64,11 +61,13 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Windows installer
+      - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: windows-installer
-          path: dist/*.exe
+          name: windows-files
+          path: |
+            dist/*.exe
+            dist/latest.yml
 
   release:
     needs: [build-mac, build-windows]
@@ -77,28 +76,22 @@ jobs:
       contents: write
 
     steps:
-      - name: Download macOS DMG
+      - name: Download macOS artifacts
         uses: actions/download-artifact@v4
         with:
-          name: macos-dmg
+          name: macos-files
           path: ./artifacts/mac
 
-      - name: Download macOS ZIP
+      - name: Download Windows artifacts
         uses: actions/download-artifact@v4
         with:
-          name: macos-zip
-          path: ./artifacts/mac
-
-      - name: Download Windows Installer
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-installer
+          name: windows-files
           path: ./artifacts/win
 
       - name: List files
         run: find ./artifacts -type f
 
-      - name: Create Release
+      - name: Create Release in source repo
         uses: softprops/action-gh-release@v2
         with:
           files: |
@@ -108,3 +101,19 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Release in public releases repo
+        uses: softprops/action-gh-release@v2
+        with:
+          repository: LAB271/SlideCue-releases
+          tag_name: ${{ github.ref_name }}
+          name: SlideCue ${{ github.ref_name }}
+          files: |
+            ./artifacts/mac/*.dmg
+            ./artifacts/mac/*.zip
+            ./artifacts/mac/*.yml
+            ./artifacts/win/*.exe
+            ./artifacts/win/*.yml
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
