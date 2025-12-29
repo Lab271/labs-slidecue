@@ -28,6 +28,10 @@ brew install --cask libreoffice
 brew install poppler
 ```
 
+### Windows
+- Microsoft PowerPoint (Microsoft 365 or standalone)
+- **Note**: Windows COM automation support is currently under development. The app will build but PowerPoint integration requires the `winax` native module which is not compatible with Electron 39. You can still use the macOS version for presentations.
+
 ## Troubleshooting
 
 ### Logs Location

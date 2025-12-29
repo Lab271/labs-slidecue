@@ -90,9 +90,6 @@
     "socket.io-client": "^4.8.3"
   },
   "optionalDependencies": {
-    "winax": "^3.4.3"
-  },
-  "optionalDependencies": {
     "winax": "^3.4.4"
   },
   "devDependencies": {

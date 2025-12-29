@@ -5,15 +5,14 @@ import { join, basename } from 'path';
 import { tmpdir } from 'os';
 import { PowerPointAutomation, SlideInfo, SlideMetadata, ProgressCallback } from './types';
 import { parsePresentationData, PresentationData, getNextVisibleSlide, getSlideData } from './slideParser';
+import log from 'electron-log';
 
 const execAsync = promisify(exec);
 
-// winax is Windows-only, conditionally import
-let winax: any;
-try {
-  winax = require('winax');
-} catch {
-  // Not on Windows, will throw if methods are called
+// PowerShell-based COM automation (no winax needed)
+async function runPowerShell(script: string): Promise<string> {
+  const { stdout } = await execAsync(`powershell -NoProfile -Command "${script.replace(/"/g, '\\"')}"`);
+  return stdout.trim();
 }
 
 // Presentation state
@@ -44,10 +43,12 @@ function queryCurrentSlide(): number {
 export const windowsAutomation: PowerPointAutomation = {
   async checkInstalled() {
     try {
-      const testApp = new winax.Object('PowerPoint.Application');
-      testApp.Quit();
+      await runPowerShell('$ppt = New-Object -ComObject PowerPoint.Application; $ppt.Version; $ppt.Quit()');
       return true;
     } catch {
+      return false;
+    }
+  },
       return false;
     }
   },
