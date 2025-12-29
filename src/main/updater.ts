@@ -24,6 +24,12 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
     repo: RELEASES_REPO.repo,
   });
 
+  log.info('[Updater] Configured feed URL:', {
+    provider: 'github',
+    owner: RELEASES_REPO.owner,
+    repo: RELEASES_REPO.repo,
+  });
+
   autoUpdater.autoDownload = false;
   autoUpdater.autoInstallOnAppQuit = true;
 
@@ -32,7 +38,7 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
   });
 
   autoUpdater.on('update-available', async (info) => {
-    log.info('[Updater] Update available:', info.version);
+    log.info('[Updater] Update available:', JSON.stringify(info, null, 2));
     
     const result = await dialog.showMessageBox(mainWindow, {
       type: 'info',
@@ -46,6 +52,7 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
 
     if (result.response === 0) {
       log.info('[Updater] User chose to download update');
+      log.info('[Updater] Download URL:', info.files?.[0]?.url || 'No URL in info');
       autoUpdater.downloadUpdate().catch((err) => {
         log.error('[Updater] Failed to download update:', err);
         dialog.showMessageBox(mainWindow, {
