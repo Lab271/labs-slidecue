@@ -9,35 +9,23 @@ const config: ForgeConfig = {
     appBundleId: 'com.lab271.slidecue',
     asar: true,
     extraResource: ['./out/remote'],
-    // Don't use .gitignore patterns - explicitly define what to ignore
-    ignore: (file) => {
-      if (!file) return false;
-      // Include these paths
-      if (
-        file.startsWith('/out') ||
-        file.startsWith('/package.json') ||
-        file.startsWith('/node_modules')
-      ) {
-        return false;
-      }
-      // Ignore everything else (src, resources, etc.)
-      if (
-        file.startsWith('/src') ||
-        file.startsWith('/resources') ||
-        file.startsWith('/.') ||
-        file.startsWith('/forge.config') ||
-        file.startsWith('/electron.vite') ||
-        file.startsWith('/tsconfig') ||
-        file.startsWith('/README') ||
-        file.startsWith('/LICENSE') ||
-        file.startsWith('/TODO') ||
-        file.startsWith('/ARCHITECTURE') ||
-        file.startsWith('/IMPLEMENTATION')
-      ) {
-        return true;
-      }
-      return false;
-    },
+    // Only ignore specific folders, not 'out'
+    ignore: [
+      /^\/src/,
+      /^\/resources/,
+      /^\/icon/,
+      /^\/.git/,
+      /^\/.github/,
+      /^\/\..*/, // dotfiles
+      /^\/forge\.config/,
+      /^\/electron\.vite/,
+      /^\/tsconfig/,
+      /^\/README/,
+      /^\/LICENSE/,
+      /^\/TODO/,
+      /^\/ARCHITECTURE/,
+      /^\/IMPLEMENTATION/,
+    ],
   },
   makers: [
     new MakerSquirrel({
