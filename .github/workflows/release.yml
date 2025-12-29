@@ -29,6 +29,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Fix latest-mac.yml URLs
+        run: |
+          sed -i '' 's|LAB271/SlideCue/releases|LAB271/SlideCue-releases/releases|g' dist/latest-mac.yml
+          cat dist/latest-mac.yml
+
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -65,6 +70,12 @@ jobs:
         run: npm run dist:win
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Fix latest.yml URLs
+        run: |
+          (Get-Content dist/latest.yml) -replace 'LAB271/SlideCue/releases', 'LAB271/SlideCue-releases/releases' | Set-Content dist/latest.yml
+          Get-Content dist/latest.yml
+        shell: pwsh
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4

@@ -81,7 +81,7 @@
     "publish": {
       "provider": "github",
       "owner": "LAB271",
-      "repo": "SlideCue-releases"
+      "repo": "SlideCue"
     }
   },
   "dependencies": {
