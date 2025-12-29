@@ -1,6 +1,6 @@
 {
   "name": "slidecue",
-  "version": "0.2.5",
+  "version": "0.3.0",
   "description": "Control PowerPoint presentations from any device on your network",
   "main": "out/main/index.js",
   "scripts": {
