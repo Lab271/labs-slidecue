@@ -78,11 +78,25 @@ function Invoke-StartSlideshow {
         }
         
         $settings = $script:presentation.SlideShowSettings
+        $settings.ShowType = 2  # ppShowTypeWindow - runs in a window instead of full screen
         $settings.StartingSlide = 1
         $settings.EndingSlide = $script:presentation.Slides.Count
         $script:slideShow = $settings.Run()
-        $script:currentSlide = 1
-        Write-Response -Status "success" -Data "1"
+        
+        # Wait for slideshow to initialize
+        Start-Sleep -Milliseconds 500
+        
+        # Verify slideshow View is available
+        if ($script:slideShow -and $script:slideShow.View) {
+            $script:currentSlide = $script:slideShow.View.CurrentShowPosition
+            Write-Response -Status "success" -Data $script:currentSlide.ToString()
+        } else {
+            Write-Response -Status "error" -Error "Slideshow started but View not available"
+        }
+    } catch {
+        Write-Response -Status "error" -Error $_.Exception.Message
+    }
+}
     } catch {
         Write-Response -Status "error" -Error $_.Exception.Message
     }
@@ -90,14 +104,31 @@ function Invoke-StartSlideshow {
 
 function Invoke-NextSlide {
     try {
-        if ($script:slideShow -and $script:slideShow.View) {
-            $script:slideShow.View.Next()
-            Start-Sleep -Milliseconds 100
-            $script:currentSlide = $script:slideShow.View.CurrentShowPosition
-            Write-Response -Status "success" -Data $script:currentSlide.ToString()
-        } else {
-            Write-Response -Status "error" -Error "No slideshow running"
+        # Debug info
+        $hasSlideShow = $script:slideShow -ne $null
+        $hasView = $false
+        if ($hasSlideShow) {
+            try {
+                $hasView = $script:slideShow.View -ne $null
+            } catch {
+                $hasView = $false
+            }
         }
+        
+        if (-not $hasSlideShow) {
+            Write-Response -Status "error" -Error "slideShow object is null"
+            return
+        }
+        
+        if (-not $hasView) {
+            Write-Response -Status "error" -Error "slideShow.View is null or not accessible"
+            return
+        }
+        
+        $script:slideShow.View.Next()
+        Start-Sleep -Milliseconds 100
+        $script:currentSlide = $script:slideShow.View.CurrentShowPosition
+        Write-Response -Status "success" -Data $script:currentSlide.ToString()
     } catch {
         Write-Response -Status "error" -Error $_.Exception.Message
     }
@@ -111,7 +142,7 @@ function Invoke-PreviousSlide {
             $script:currentSlide = $script:slideShow.View.CurrentShowPosition
             Write-Response -Status "success" -Data $script:currentSlide.ToString()
         } else {
-            Write-Response -Status "error" -Error "No slideshow running"
+            Write-Response -Status "error" -Error "No slideshow running or view not available"
         }
     } catch {
         Write-Response -Status "error" -Error $_.Exception.Message
@@ -136,14 +167,22 @@ function Invoke-GotoSlide {
 
 function Invoke-GetCurrentSlide {
     try {
-        if ($script:slideShow -and $script:slideShow.View) {
+        # Check if we have a slideshow
+        if (-not $script:slideShow) {
+            Write-Response -Status "success" -Data $script:currentSlide.ToString()
+            return
+        }
+        
+        # Try to get current position from View
+        if ($script:slideShow.View) {
             $current = $script:slideShow.View.CurrentShowPosition
+            $script:currentSlide = $current
             Write-Response -Status "success" -Data $current.ToString()
         } else {
             Write-Response -Status "success" -Data $script:currentSlide.ToString()
         }
     } catch {
-        Write-Response -Status "error" -Error $_.Exception.Message
+        Write-Response -Status "success" -Data $script:currentSlide.ToString()
     }
 }
 
