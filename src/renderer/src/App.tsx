@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import './types/electron.d.ts';
 import appIcon from './assets/icon.png';
+import sharepointQR from '../../../resources/sbp.link.sp_space.png';
 
 type AppState = 'checking' | 'no-powerpoint' | 'idle' | 'importing' | 'loaded' | 'presenting';
 
@@ -86,6 +87,14 @@ export default function App() {
       setState('loaded');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to stop');
+    }
+  };
+
+  const handleStartSlideshow = async () => {
+    try {
+      await window.electronAPI.startSlideshow();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to start slideshow');
     }
   };
 
@@ -233,12 +242,20 @@ export default function App() {
           </p>
         </div>
 
-        <button
-          onClick={handleStop}
-          className="mt-4 px-8 py-3 bg-red-600/90 text-white rounded-xl hover:bg-red-500 transition-all text-lg font-medium shadow-lg shadow-red-900/30 hover:shadow-red-900/50"
-        >
-          Stop Presentation
-        </button>
+        <div className="flex gap-4">
+          <button
+            onClick={handleStartSlideshow}
+            className="px-8 py-3 bg-blue-600/90 text-white rounded-xl hover:bg-blue-500 transition-all text-lg font-medium shadow-lg shadow-blue-900/30 hover:shadow-blue-900/50"
+          >
+            Enter Presentation Mode
+          </button>
+          <button
+            onClick={handleStop}
+            className="px-8 py-3 bg-red-600/90 text-white rounded-xl hover:bg-red-500 transition-all text-lg font-medium shadow-lg shadow-red-900/30 hover:shadow-red-900/50"
+          >
+            Stop Presentation
+          </button>
+        </div>
       </div>
     );
   }
@@ -254,24 +271,15 @@ export default function App() {
             <p className="text-xs text-slate-400">PowerPoint Remote Control</p>
           </div>
         </div>
-        <div className="flex gap-3">
+        {state === 'loaded' && (
           <button
             onClick={handleImport}
-            className="px-5 py-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-500 transition-all font-medium shadow-lg shadow-blue-900/30 hover:shadow-blue-900/50 flex items-center gap-2"
+            className="px-5 py-2.5 bg-slate-700 text-white rounded-xl hover:bg-slate-600 transition-all font-medium shadow-lg flex items-center gap-2 border border-slate-600"
           >
-            <span>📁</span>
-            Import PPTX
+            <span>🔄</span>
+            Load Different PPTX
           </button>
-          {state === 'loaded' && (
-            <button
-              onClick={handlePresent}
-              className="px-5 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-500 hover:to-emerald-500 transition-all font-medium shadow-lg shadow-green-900/30 hover:shadow-green-900/50 flex items-center gap-2"
-            >
-              <span>▶️</span>
-              Present
-            </button>
-          )}
-        </div>
+        )}
       </header>
 
       {error && (
@@ -284,19 +292,42 @@ export default function App() {
       <main className="flex-1 p-6 overflow-auto">
         {presentation ? (
           <div>
-            <div className="flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-slate-700/50 rounded-xl flex items-center justify-center text-2xl">
-                📄
+            <div className="bg-gradient-to-r from-slate-800/80 to-slate-700/60 border-2 border-green-500/30 rounded-2xl p-8 mb-6 shadow-2xl">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-5">
+                  <div className="w-20 h-20 bg-green-500/20 rounded-2xl flex items-center justify-center text-4xl border-2 border-green-500/40">
+                    ✅
+                  </div>
+                  <div>
+                    <p className="text-green-400 text-sm font-semibold mb-1">✓ READY TO PRESENT</p>
+                    <p className="text-white font-bold text-2xl mb-2">{presentation.fileName}</p>
+                    <p className="text-slate-300 text-sm">
+                      {presentation.thumbnails.length} slide{presentation.thumbnails.length !== 1 ? 's' : ''} loaded and ready
+                      {presentation.hiddenSlides.length > 0 && (
+                        <span className="text-slate-400"> • {presentation.hiddenSlides.length} hidden</span>
+                      )}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-3">
+                  <button
+                    onClick={handlePresent}
+                    className="px-10 py-5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl hover:from-green-500 hover:to-emerald-500 transition-all font-bold shadow-xl shadow-green-900/50 hover:shadow-green-900/70 hover:scale-105 flex items-center gap-3 text-lg"
+                  >
+                    <span className="text-3xl">🚀</span>
+                    <div className="text-left">
+                      <div>Start Tool</div>
+                      <div className="text-xs font-normal opacity-90">Generate QR & PIN code</div>
+                    </div>
+                  </button>
+                  <p className="text-center text-slate-400 text-xs">Click to enable remote control</p>
+                </div>
               </div>
-              <div>
-                <p className="text-white font-medium">{presentation.fileName}</p>
-                <p className="text-slate-400 text-sm">
-                  {presentation.thumbnails.length} slide{presentation.thumbnails.length !== 1 ? 's' : ''}
-                  {presentation.hiddenSlides.length > 0 && (
-                    <span className="text-slate-500"> • {presentation.hiddenSlides.length} hidden</span>
-                  )}
-                </p>
-              </div>
+            </div>
+            
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-slate-300 font-semibold">Slide Preview</h3>
+              <p className="text-slate-500 text-sm">Review your presentation before starting</p>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
               {presentation.thumbnails.map((thumb, i) => (
@@ -326,16 +357,63 @@ export default function App() {
           </div>
         ) : (
           <div className="flex-1 flex items-center justify-center h-full">
-            <div className="border-2 border-dashed border-slate-700/50 rounded-2xl p-16 text-center bg-slate-800/20 hover:bg-slate-800/30 hover:border-slate-600/50 transition-all cursor-pointer group"
-                 onClick={handleImport}>
-              <img src={appIcon} alt="SlideCue" className="w-24 h-24 rounded-2xl mx-auto mb-6 group-hover:scale-110 transition-transform shadow-xl" />
-              <h2 className="text-xl font-semibold text-white mb-2">Import a Presentation</h2>
-              <p className="text-slate-400 text-sm mb-6 max-w-xs mx-auto">
-                Click here or use the button above to import a PowerPoint file
-              </p>
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-slate-700/50 rounded-lg text-slate-400 text-sm">
-                <span>📁</span>
-                <span>.pptx, .ppt files supported</span>
+            <div className="max-w-4xl w-full">
+              <div className="text-center mb-12">
+                <img src={appIcon} alt="SlideCue" className="w-20 h-20 rounded-2xl mx-auto mb-4 shadow-xl" />
+                <h2 className="text-3xl font-bold text-white mb-3">Get Started with SlideCue</h2>
+                <p className="text-slate-400">Follow these steps to present your slides</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Step 1 */}
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 text-center hover:border-slate-600/50 transition-all">
+                  <div className="w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">
+                    📁
+                  </div>
+                  <div className="text-6xl font-bold text-blue-500 mb-4">1</div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Get Your PPTX</h3>
+                  <p className="text-slate-400 text-sm mb-4">
+                    Visit our SharePoint to access presentations
+                  </p>
+                  <div className="bg-white p-3 rounded-xl inline-block">
+                    <img src={sharepointQR} alt="SharePoint QR" className="w-32 h-32" />
+                  </div>
+                  <p className="text-xs text-slate-500 mt-3">sbp.link/sp_space</p>
+                </div>
+
+                {/* Step 2 */}
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 text-center hover:border-slate-600/50 transition-all">
+                  <div className="w-16 h-16 bg-purple-500/20 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">
+                    📂
+                  </div>
+                  <div className="text-6xl font-bold text-purple-500 mb-4">2</div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Load Presentation</h3>
+                  <p className="text-slate-400 text-sm mb-6">
+                    Click the Import button to open your PPTX file
+                  </p>
+                  <button
+                    onClick={handleImport}
+                    className="px-6 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-500 transition-all font-medium shadow-lg w-full"
+                  >
+                    📁 Import PPTX
+                  </button>
+                </div>
+
+                {/* Step 3 */}
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-2xl p-6 text-center hover:border-slate-600/50 transition-all">
+                  <div className="w-16 h-16 bg-green-500/20 rounded-2xl flex items-center justify-center text-3xl mx-auto mb-4">
+                    ▶️
+                  </div>
+                  <div className="text-6xl font-bold text-green-500 mb-4">3</div>
+                  <h3 className="text-lg font-semibold text-white mb-3">Start Presenting</h3>
+                  <p className="text-slate-400 text-sm mb-6">
+                    Click Present to generate your remote control QR code
+                  </p>
+                  <div className="px-6 py-3 bg-slate-700/50 text-slate-500 rounded-xl font-medium cursor-not-allowed">
+                    ▶️ Present
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">Import a file first</p>
+                </div>
               </div>
             </div>
           </div>

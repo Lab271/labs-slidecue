@@ -84,8 +84,9 @@ export const macOSAutomation: PowerPointAutomation = {
     console.log('Presentation data:', JSON.stringify(presentationData, null, 2));
     
     // Use 'open' command which handles permissions better than AppleScript
+    // -g flag keeps PowerPoint in background, doesn't switch focus
     console.log('Opening presentation...');
-    await execAsync(`open -a "Microsoft PowerPoint" "${localPresentationCopy}"`);
+    await execAsync(`open -g -a "Microsoft PowerPoint" "${localPresentationCopy}"`);
     
     // Wait for file to open
     await new Promise(resolve => setTimeout(resolve, 2000));

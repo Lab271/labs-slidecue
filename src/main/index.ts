@@ -159,9 +159,6 @@ ipcMain.handle('start-presentation', async () => {
   // Setup socket handlers
   setupSocketHandlers(io);
 
-  // Start PowerPoint slideshow
-  await automation.startSlideshow();
-
   return {
     url,
     pin,
@@ -172,6 +169,10 @@ ipcMain.handle('start-presentation', async () => {
 ipcMain.handle('stop-presentation', async () => {
   await automation.stopSlideshow();
   stopServer();
+});
+
+ipcMain.handle('start-slideshow', async () => {
+  await automation.startSlideshow();
 });
 
 ipcMain.handle('get-slide-info', async () => {

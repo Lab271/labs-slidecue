@@ -5,6 +5,7 @@ const electronAPI = {
   importPresentation: () => ipcRenderer.invoke('import-presentation'),
   startPresentation: () => ipcRenderer.invoke('start-presentation'),
   stopPresentation: () => ipcRenderer.invoke('stop-presentation'),
+  startSlideshow: () => ipcRenderer.invoke('start-slideshow'),
   getSlideInfo: () => ipcRenderer.invoke('get-slide-info'),
   onImportProgress: (callback: (data: { step: number; total: number; message: string }) => void) => {
     ipcRenderer.on('import-progress', (_event, data) => callback(data));

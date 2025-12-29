@@ -16,6 +16,7 @@ interface ElectronAPI {
   } | null>;
   startPresentation: () => Promise<{ url: string; pin: string }>;
   stopPresentation: () => Promise<void>;
+  startSlideshow: () => Promise<void>;
   getSlideInfo: () => Promise<{ current: number; total: number }>;
   onImportProgress: (callback: (data: { step: number; total: number; message: string }) => void) => () => void;
 }
