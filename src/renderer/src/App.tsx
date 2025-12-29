@@ -304,11 +304,11 @@ export default function App() {
                   key={i}
                   className="bg-slate-800/50 border border-slate-700/50 rounded-xl overflow-hidden shadow-lg hover:shadow-xl transition-all hover:border-slate-600/50 group"
                 >
-                  <div className="relative w-full aspect-video bg-slate-900/50">
+                  <div className="relative w-full bg-black flex items-center justify-center" style={{ minHeight: '120px', height: '150px' }}>
                     <img
                       src={`file://${thumb}`}
                       alt={`Slide ${i + 1}`}
-                      className="w-full h-full object-contain"
+                      className="max-w-full max-h-full object-contain"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
