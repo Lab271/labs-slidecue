@@ -218,7 +218,7 @@ export default function App() {
   return (
     <div className="flex flex-col h-screen bg-[#0f172a]">
       {/* Header */}
-      <header className="flex justify-between items-center p-4 bg-[#1e293b] border-b border-[#475569]">
+      <header className="flex justify-between items-center px-5 py-4 bg-[#1e293b] border-b border-[#475569]">
         <div className="flex items-center gap-3">
           <img src={appIcon} alt="SlideCue" className="w-10 h-10 rounded-lg" />
           <div>
@@ -226,14 +226,16 @@ export default function App() {
             <p className="text-xs text-[#64748b]">PowerPoint Remote Control</p>
           </div>
         </div>
-        {state === 'loaded' && (
-          <button
-            onClick={handleImport}
-            className="px-4 py-2 bg-[#334155] text-[#f8fafc] rounded-lg hover:bg-[#475569] transition-all text-sm font-medium border border-[#475569]"
-          >
-            Load Different File
-          </button>
-        )}
+        <div className="h-10 flex items-center">
+          {state === 'loaded' && (
+            <button
+              onClick={handleImport}
+              className="px-4 py-2 bg-[#334155] text-[#f8fafc] rounded-lg hover:bg-[#475569] transition-all text-sm font-medium border border-[#475569]"
+            >
+              Load Different File
+            </button>
+          )}
+        </div>
       </header>
 
       {error && (
