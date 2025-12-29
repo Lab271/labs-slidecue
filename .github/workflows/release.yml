@@ -24,8 +24,8 @@ jobs:
       - name: Build app
         run: npm run build
 
-      - name: Package with Forge
-        run: npm run make
+      - name: Build and package for macOS
+        run: npm run dist:mac
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -33,13 +33,13 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: macos-dmg
-          path: out/make/*.dmg
+          path: dist/*.dmg
 
       - name: Upload ZIP artifact
         uses: actions/upload-artifact@v4
         with:
           name: macos-zip
-          path: out/make/zip/**/*.zip
+          path: dist/*.zip
 
   build-windows:
     runs-on: windows-latest
@@ -59,35 +59,16 @@ jobs:
       - name: Build app
         run: npm run build
 
-      - name: Verify build output
-        run: |
-          echo "Checking out directory:"
-          dir out
-          dir out\main
-          type package.json | findstr main
-
-      - name: Package with Forge
-        run: npm run make
+      - name: Build and package for Windows
+        run: npm run dist:win
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Setup artifact
+      - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: windows-setup
-          path: out/make/squirrel.windows/x64/*.exe
-
-      - name: Upload RELEASES artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-releases
-          path: out/make/squirrel.windows/x64/RELEASES
-
-      - name: Upload nupkg artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: windows-nupkg
-          path: out/make/squirrel.windows/x64/*.nupkg
+          name: windows-installer
+          path: dist/*.exe
 
   release:
     needs: [build-mac, build-windows]
@@ -100,60 +81,30 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: macos-dmg
-          path: ./dist/mac
+          path: ./artifacts/mac
 
       - name: Download macOS ZIP
         uses: actions/download-artifact@v4
         with:
           name: macos-zip
-          path: ./dist/mac
+          path: ./artifacts/mac
 
-      - name: Download Windows Setup
+      - name: Download Windows Installer
         uses: actions/download-artifact@v4
         with:
-          name: windows-setup
-          path: ./dist/win
-
-      - name: Download Windows RELEASES
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-releases
-          path: ./dist/win
-
-      - name: Download Windows nupkg
-        uses: actions/download-artifact@v4
-        with:
-          name: windows-nupkg
-          path: ./dist/win
+          name: windows-installer
+          path: ./artifacts/win
 
       - name: List files
-        run: find ./dist -type f
+        run: find ./artifacts -type f
 
-      - name: Create Release in source repo
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            ./dist/mac/*.dmg
-            ./dist/mac/*.zip
-            ./dist/win/*.exe
+            ./artifacts/mac/*.dmg
+            ./artifacts/mac/*.zip
+            ./artifacts/win/*.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      # Also publish to the PUBLIC releases repo for auto-updates
-      # This allows the auto-updater to work without exposing source code
-      - name: Create Release in public releases repo
-        uses: softprops/action-gh-release@v2
-        with:
-          repository: LAB271/SlideCue-releases
-          tag_name: ${{ github.ref_name }}
-          name: SlideCue ${{ github.ref_name }}
-          files: |
-            ./dist/mac/*.dmg
-            ./dist/mac/*.zip
-            ./dist/win/*.exe
-            ./dist/win/RELEASES
-            ./dist/win/*.nupkg
-        env:
-          # Create a PAT with 'repo' scope and add as RELEASES_REPO_TOKEN secret
-          GITHUB_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
