@@ -245,29 +245,63 @@ export const windowsAutomation: PowerPointAutomation = {
       log.info('[Windows] Copying presentation to temp location:', localPresentationCopy);
       await copyFile(filePath, localPresentationCopy);
       
-      // Parse presentation data (slides, hidden, animations, notes)
-      log.info('[Windows] Parsing presentation data');
-      presentationData = await parsePresentationData(localPresentationCopy);
-      
-      log.info('[Windows] Presentation data:', {
-        totalSlides: presentationData.totalSlides,
-        visibleSlides: presentationData.visibleSlides,
-        hiddenSlides: presentationData.hiddenSlides
-      });
-      
       // Open in PowerPoint via PowerShell bridge
       log.info('[Windows] Opening presentation in PowerPoint');
-      const response = await bridge.sendCommand({
+      const openResponse = await bridge.sendCommand({
         action: 'open',
         filePath: localPresentationCopy
       });
       
-      if (response.status !== 'success') {
-        throw new Error(response.error || 'Failed to open presentation');
+      if (openResponse.status !== 'success') {
+        throw new Error(openResponse.error || 'Failed to open presentation');
+      }
+      
+      // Get slide metadata from PowerPoint (including hidden slides and animations)
+      log.info('[Windows] Getting slide metadata from PowerPoint');
+      const metadataResponse = await bridge.sendCommand({ action: 'getMetadata' });
+      
+      if (metadataResponse.status === 'success' && metadataResponse.data) {
+        const metadata = JSON.parse(metadataResponse.data);
+        totalSlides = metadata.totalSlides;
+        
+        // Build presentationData from PowerPoint metadata
+        const slides = metadata.slides.map((s: any) => ({
+          slideNumber: s.slideNumber,
+          name: `Slide ${s.slideNumber}`,
+          hidden: s.hidden,
+          animationClicks: s.animationClicks,
+          notes: s.notes || ''
+        }));
+        
+        const visibleSlides = slides.filter((s: any) => !s.hidden).map((s: any) => s.slideNumber);
+        const hiddenSlides = slides.filter((s: any) => s.hidden).map((s: any) => s.slideNumber);
+        
+        presentationData = {
+          slides,
+          totalSlides,
+          visibleSlides,
+          hiddenSlides
+        };
+        
+        log.info('[Windows] Parsed presentation metadata:', {
+          totalSlides: presentationData.totalSlides,
+          visibleSlides: presentationData.visibleSlides,
+          hiddenSlides: presentationData.hiddenSlides
+        });
+      } else {
+        // Fallback to basic data if metadata fails
+        totalSlides = parseInt(openResponse.data || '0', 10);
+        presentationData = {
+          slides: [],
+          totalSlides,
+          visibleSlides: Array.from({ length: totalSlides }, (_, i) => i + 1),
+          hiddenSlides: []
+        };
+        log.warn('[Windows] Failed to get metadata, using fallback');
       }
       
       // Get total slides from response
-      totalSlides = parseInt(response.data || '0', 10) || presentationData.totalSlides;
+      totalSlides = parseInt(openResponse.data || '0', 10) || presentationData.totalSlides;
       currentSlide = 1;
       currentAnimationStep = 0;
       

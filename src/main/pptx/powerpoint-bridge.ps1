@@ -48,6 +48,72 @@ function Invoke-OpenPresentation {
     }
 }
 
+function Invoke-GetSlideMetadata {
+    try {
+        if (-not $script:presentation) {
+            Write-Response -Status "error" -Error "No presentation open"
+            return
+        }
+        
+        $slides = @()
+        $totalSlides = $script:presentation.Slides.Count
+        
+        for ($i = 1; $i -le $totalSlides; $i++) {
+            $slide = $script:presentation.Slides.Item($i)
+            
+            # Check if slide is hidden
+            # SlideShowTransition.Hidden property: msoTrue = -1, msoFalse = 0
+            $isHidden = $slide.SlideShowTransition.Hidden -eq -1
+            
+            # Get animation count (approximate - counts effect timings)
+            $animationCount = 0
+            try {
+                if ($slide.TimeLine.MainSequence) {
+                    $animationCount = $slide.TimeLine.MainSequence.Count
+                }
+            } catch {
+                # Ignore animation count errors
+            }
+            
+            # Get speaker notes
+            $notes = ""
+            try {
+                if ($slide.HasNotesPage) {
+                    $notesPage = $slide.NotesPage
+                    $shapes = $notesPage.Shapes
+                    foreach ($shape in $shapes) {
+                        if ($shape.HasTextFrame) {
+                            if ($shape.TextFrame.HasText) {
+                                $notes += $shape.TextFrame.TextRange.Text
+                            }
+                        }
+                    }
+                    $notes = $notes.Trim()
+                }
+            } catch {
+                # Ignore notes errors
+            }
+            
+            $slideInfo = @{
+                slideNumber = $i
+                hidden = $isHidden
+                animationClicks = $animationCount
+                notes = $notes
+            }
+            $slides += $slideInfo
+        }
+        
+        $result = @{
+            totalSlides = $totalSlides
+            slides = $slides
+        } | ConvertTo-Json -Depth 3 -Compress
+        
+        Write-Response -Status "success" -Data $result
+    } catch {
+        Write-Response -Status "error" -Error $_.Exception.Message
+    }
+}
+
 function Invoke-ExportThumbnails {
     param([string]$OutputDir)
     
@@ -240,6 +306,7 @@ while ($true) {
         switch ($command.action) {
             "check" { Invoke-CheckInstalled }
             "open" { Invoke-OpenPresentation -FilePath $command.filePath }
+            "getMetadata" { Invoke-GetSlideMetadata }
             "export" { Invoke-ExportThumbnails -OutputDir $command.outputDir }
             "start" { Invoke-StartSlideshow }
             "next" { Invoke-NextSlide }
