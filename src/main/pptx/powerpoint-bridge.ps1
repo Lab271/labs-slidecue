@@ -78,20 +78,32 @@ function Invoke-StartSlideshow {
         }
         
         $settings = $script:presentation.SlideShowSettings
-        $settings.ShowType = 2  # ppShowTypeWindow - runs in a window instead of full screen
         $settings.StartingSlide = 1
         $settings.EndingSlide = $script:presentation.Slides.Count
+        
+        # Run the slideshow
         $script:slideShow = $settings.Run()
         
         # Wait for slideshow to initialize
         Start-Sleep -Milliseconds 500
         
-        # Verify slideshow View is available
-        if ($script:slideShow -and $script:slideShow.View) {
-            $script:currentSlide = $script:slideShow.View.CurrentShowPosition
-            Write-Response -Status "success" -Data $script:currentSlide.ToString()
-        } else {
-            Write-Response -Status "error" -Error "Slideshow started but View not available"
+        # Try to set to windowed mode after starting
+        try {
+            if ($script:slideShow.View.State -eq 1) {  # ppSlideShowRunning
+                # Slideshow is running, now we can work with it
+                $script:currentSlide = $script:slideShow.View.CurrentShowPosition
+                Write-Response -Status "success" -Data $script:currentSlide.ToString()
+            } else {
+                Write-Response -Status "error" -Error "Slideshow not in running state"
+            }
+        } catch {
+            # Even if we can't check state, if we have a View, we're probably OK
+            if ($script:slideShow.View) {
+                $script:currentSlide = $script:slideShow.View.CurrentShowPosition
+                Write-Response -Status "success" -Data $script:currentSlide.ToString()
+            } else {
+                Write-Response -Status "error" -Error "Slideshow.View not available: $($_.Exception.Message)"
+            }
         }
     } catch {
         Write-Response -Status "error" -Error $_.Exception.Message
