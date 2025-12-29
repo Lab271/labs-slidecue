@@ -39,7 +39,7 @@ function Invoke-OpenPresentation {
     
     try {
         $script:pptApp = New-Object -ComObject PowerPoint.Application
-        $script:pptApp.Visible = $true
+        $script:pptApp.Visible = 1  # msoTrue = -1, but 1 also works for visible
         $script:presentation = $script:pptApp.Presentations.Open($FilePath)
         $slideCount = $script:presentation.Slides.Count
         Write-Response -Status "success" -Data $slideCount.ToString()
