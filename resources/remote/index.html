@@ -202,18 +202,31 @@
     .main-content {
       flex: 1;
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr 400px;
       padding: 0.5rem;
-      gap: 0.5rem;
+      gap: 0.75rem;
       overflow: hidden;
       min-height: 0;
     }
     
-    .slide-column {
+    .slides-container {
       display: flex;
       flex-direction: column;
+      gap: 0.5rem;
       min-height: 0;
-      overflow: hidden;
+      overflow-y: auto;
+    }
+    
+    .notes-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      min-height: 0;
+      overflow-y: auto;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 0.625rem;
+      padding: 0.75rem;
     }
     
     .slide-card {
@@ -223,8 +236,7 @@
       overflow: hidden;
       display: flex;
       flex-direction: column;
-      flex: 1;
-      min-height: 0;
+      flex-shrink: 0;
     }
     
     .slide-card-header {
@@ -261,13 +273,12 @@
       align-items: center;
       justify-content: center;
       flex-shrink: 0;
-      min-height: 200px;
-      max-height: 50vh;
+      padding: 1rem;
     }
     
     .slide-preview img {
       max-width: 100%;
-      max-height: 50vh;
+      max-height: 280px;
       width: auto;
       height: auto;
       object-fit: contain;
@@ -561,8 +572,8 @@
     </div>
     
     <div class="main-content">
-      <!-- Current Slide Column -->
-      <div class="slide-column">
+      <!-- Left: Slides Container -->
+      <div class="slides-container">
         <div class="slide-card current-card">
           <div class="slide-card-header">
             <span class="slide-card-label">Current</span>
@@ -575,19 +586,8 @@
               <div class="placeholder-text">Loading</div>
             </div>
           </div>
-          <div class="notes-section">
-            <div class="notes-header">
-              <span class="notes-label">📝 Speaker Notes</span>
-            </div>
-            <div class="notes-content-wrapper">
-              <div class="notes-content" id="current-notes">No notes</div>
-            </div>
-          </div>
         </div>
-      </div>
-      
-      <!-- Next Slide Column -->
-      <div class="slide-column" id="next-column">
+        
         <div class="slide-card next-card" id="next-card">
           <div class="slide-card-header">
             <span class="slide-card-label">Up Next</span>
@@ -598,14 +598,6 @@
             <div class="placeholder" id="next-placeholder">
               <div class="placeholder-icon">📄</div>
               <div class="placeholder-text">Loading</div>
-            </div>
-          </div>
-          <div class="notes-section">
-            <div class="notes-header">
-              <span class="notes-label">📝 Coming Up</span>
-            </div>
-            <div class="notes-content-wrapper">
-              <div class="notes-content" id="next-notes">No notes</div>
             </div>
           </div>
         </div>
@@ -622,14 +614,32 @@
               <div class="placeholder-text">End</div>
             </div>
           </div>
-          <div class="notes-section">
-            <div class="notes-header">
-              <span class="notes-label">🎉 Finished</span>
-            </div>
-            <div class="notes-content-wrapper">
-              <div class="notes-content empty">You've reached the last slide</div>
-            </div>
+        </div>
+      </div>
+      
+      <!-- Right: Notes Container -->
+      <div class="notes-container">
+        <div class="standalone-notes">
+          <div class="notes-header">
+            <span class="notes-label">📝 Current Slide Notes</span>
           </div>
+          <div class="notes-content" id="current-notes">No notes</div>
+        </div>
+        
+        <div class="notes-divider"></div>
+        
+        <div class="standalone-notes" id="next-notes-section">
+          <div class="notes-header">
+            <span class="notes-label">📝 Coming Up</span>
+          </div>
+          <div class="notes-content" id="next-notes">No notes</div>
+        </div>
+        
+        <div class="standalone-notes" id="end-notes-section" style="display:none;">
+          <div class="notes-header">
+            <span class="notes-label">🎉 Finished</span>
+          </div>
+          <div class="notes-content empty">You've reached the last slide</div>
         </div>
       </div>
     </div>
@@ -683,7 +693,9 @@
     const nextImg = document.getElementById('next-img');
     const nextPlaceholder = document.getElementById('next-placeholder');
     const nextNotes = document.getElementById('next-notes');
+    const nextNotesSection = document.getElementById('next-notes-section');
     const endCard = document.getElementById('end-card');
+    const endNotesSection = document.getElementById('end-notes-section');
     
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
@@ -831,9 +843,13 @@
       if (slideInfo.isLastSlide) {
         nextCard.style.display = 'none';
         endCard.style.display = 'flex';
+        nextNotesSection.style.display = 'none';
+        endNotesSection.style.display = 'flex';
       } else {
         nextCard.style.display = 'flex';
         endCard.style.display = 'none';
+        nextNotesSection.style.display = 'flex';
+        endNotesSection.style.display = 'none';
         
         nextSlideNum.textContent = slideInfo.nextVisibleSlide || '—';
         loadImage(nextImg, nextPlaceholder, slideInfo.nextVisibleSlide, 'None');
