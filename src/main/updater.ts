@@ -1,5 +1,6 @@
 import { autoUpdater } from 'electron-updater';
 import { app, BrowserWindow, dialog } from 'electron';
+import log from 'electron-log';
 
 // Configure for public releases repo
 // Create a PUBLIC repo called "SlideCue-releases" to host your releases
@@ -12,7 +13,7 @@ const RELEASES_REPO = {
 export function setupAutoUpdater(mainWindow: BrowserWindow) {
   // Skip updates in development
   if (!app.isPackaged) {
-    console.log('Skip checkForUpdates because application is not packed and dev update config is not forced');
+    log.info('[Updater] Skip checkForUpdates because application is not packed');
     return;
   }
 
@@ -27,11 +28,11 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
   autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on('checking-for-update', () => {
-    console.log('Checking for updates...');
+    log.info('[Updater] Checking for updates...');
   });
 
   autoUpdater.on('update-available', async (info) => {
-    console.log('Update available:', info.version);
+    log.info('[Updater] Update available:', info.version);
     
     const result = await dialog.showMessageBox(mainWindow, {
       type: 'info',
@@ -44,21 +45,32 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
     });
 
     if (result.response === 0) {
-      autoUpdater.downloadUpdate();
+      log.info('[Updater] User chose to download update');
+      autoUpdater.downloadUpdate().catch((err) => {
+        log.error('[Updater] Failed to download update:', err);
+        dialog.showMessageBox(mainWindow, {
+          type: 'error',
+          title: 'Download Failed',
+          message: 'Failed to download update',
+          detail: err.message,
+        });
+      });
+    } else {
+      log.info('[Updater] User chose to skip update');
     }
   });
 
   autoUpdater.on('update-not-available', () => {
-    console.log('No updates available - you have the latest version');
+    log.info('[Updater] No updates available - you have the latest version');
   });
 
   autoUpdater.on('download-progress', (progress) => {
-    console.log(`Download progress: ${Math.round(progress.percent)}%`);
+    log.info(`[Updater] Download progress: ${Math.round(progress.percent)}%`);
     mainWindow.setProgressBar(progress.percent / 100);
   });
 
   autoUpdater.on('update-downloaded', async (info) => {
-    console.log('Update downloaded:', info.version);
+    log.info('[Updater] Update downloaded:', info.version);
     mainWindow.setProgressBar(-1); // Remove progress bar
     
     const result = await dialog.showMessageBox(mainWindow, {
@@ -72,19 +84,29 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
     });
 
     if (result.response === 0) {
+      log.info('[Updater] User chose to restart now');
       autoUpdater.quitAndInstall();
+    } else {
+      log.info('[Updater] User chose to restart later');
     }
   });
 
   autoUpdater.on('error', (error) => {
-    console.error('Auto-updater error:', error.message);
-    // Don't show error dialogs - just log them
+    log.error('[Updater] Auto-updater error:', error.message, error.stack);
+    // Show error dialog for debugging
+    dialog.showMessageBox(mainWindow, {
+      type: 'error',
+      title: 'Update Error',
+      message: 'Failed to check for updates',
+      detail: error.message,
+    });
   });
 
   // Check for updates after a short delay
   setTimeout(() => {
+    log.info('[Updater] Initiating update check');
     autoUpdater.checkForUpdates().catch((err) => {
-      console.error('Failed to check for updates:', err.message);
+      log.error('[Updater] Failed to check for updates:', err.message);
     });
   }, 3000);
 }
