@@ -38,6 +38,10 @@
       {
         "from": "resources/remote",
         "to": "remote"
+      },
+      {
+        "from": "src/main/pptx/powerpoint-bridge.ps1",
+        "to": "powerpoint-bridge.ps1"
       }
     ],
     "mac": {
