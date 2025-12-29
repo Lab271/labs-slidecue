@@ -28,6 +28,18 @@ brew install --cask libreoffice
 brew install poppler
 ```
 
+## Troubleshooting
+
+### Logs Location
+If you encounter issues, check the application logs:
+- **macOS**: `~/Library/Logs/SlideCue/main.log`
+- **Windows**: `%USERPROFILE%\AppData\Roaming\SlideCue\logs\main.log`
+
+### Common Issues
+- **PNGs not generating**: Ensure LibreOffice and Poppler are installed on macOS
+- **Server won't start**: Check if port 3000 is available or being blocked by firewall
+- **Permission errors**: Grant Accessibility and Automation permissions to SlideCue in System Settings
+
 ## Getting Started
 
 ### Development

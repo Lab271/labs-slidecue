@@ -5,6 +5,7 @@ import { join, basename } from 'path';
 import { tmpdir } from 'os';
 import { PowerPointAutomation, SlideInfo, SlideMetadata, ProgressCallback } from './types';
 import { parsePresentationData, PresentationData, getNextVisibleSlide, getSlideData } from './slideParser';
+import log from 'electron-log';
 
 const execAsync = promisify(exec);
 
@@ -123,7 +124,11 @@ end tell
     try {
       // Use LibreOffice headless conversion (most reliable)
       console.log('Using LibreOffice to convert PPTX to PDF...');
-      await execAsync(`/Applications/LibreOffice.app/Contents/MacOS/soffice --headless --convert-to pdf --outdir "${outputDir}" "${pptxPath}"`);
+      log.info('Starting LibreOffice conversion for:', pptxPath);
+      const sofficeCmd = `/Applications/LibreOffice.app/Contents/MacOS/soffice --headless --convert-to pdf --outdir "${outputDir}" "${pptxPath}"`;
+      log.info('Running soffice command:', sofficeCmd);
+      await execAsync(sofficeCmd);
+      log.info('LibreOffice conversion completed');
       
       // Rename the output file (LibreOffice uses the original filename)
       const baseName = basename(pptxPath).replace(/\.(pptx?|PPTX?)$/, '');
@@ -141,9 +146,16 @@ end tell
       // Check if PDF was created
       await access(pdfPath);
       console.log('PDF created, converting to PNG...');
+      log.info('PDF created successfully at:', pdfPath);
       
       // Convert PDF pages to PNG using pdftoppm
-      await execAsync(`pdftoppm -png -r 150 "${pdfPath}" "${outputDir}/slide"`);
+      // Use full path to pdftoppm since packaged apps don't have full PATH
+      const pdftoppmPath = await execAsync('which pdftoppm').then(r => r.stdout.trim()).catch(() => '/opt/homebrew/bin/pdftoppm');
+      log.info('Using pdftoppm at:', pdftoppmPath);
+      const pdftoppmCmd = `"${pdftoppmPath}" -png -r 150 "${pdfPath}" "${outputDir}/slide"`;
+      log.info('Running pdftoppm command:', pdftoppmCmd);
+      await execAsync(pdftoppmCmd);
+      log.info('Successfully converted PDF to PNGs');
       
       // pdftoppm creates slide-1.png, slide-2.png, etc.
       // LibreOffice only exports visible slides, so we need to rename them
@@ -174,6 +186,7 @@ end tell
       await unlink(pdfPath).catch(() => {});
       
     } catch (e) {
+      log.error('Thumbnail export failed:', e);
       console.error('Export failed:', e);
     }
     
@@ -208,16 +221,19 @@ end tell
   async startSlideshow() {
     currentSlide = 1;
     currentAnimationStep = 0;
+    log.info('Starting slideshow');
     
+    // Use keyboard shortcut which works in any language
     await runAppleScript(`
 tell application "Microsoft PowerPoint"
   activate
 end tell
-delay 0.2
+delay 0.3
 tell application "System Events"
   keystroke return using {command down, shift down}
 end tell
     `);
+    
     await new Promise(resolve => setTimeout(resolve, 500));
     
     // PowerPoint may skip hidden slide 1, query actual position

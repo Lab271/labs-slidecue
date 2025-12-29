@@ -5,6 +5,7 @@ import { networkInterfaces } from 'os';
 import { readdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
+import log from 'electron-log';
 
 let server: ReturnType<typeof createServer> | null = null;
 let io: Server | null = null;
@@ -15,9 +16,13 @@ let currentPort: number = 3000;
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise((resolve) => {
     const testServer = createServer();
-    testServer.once('error', () => resolve(false));
+    testServer.once('error', (err) => {
+      log.warn(`Port ${port} is not available:`, err.message);
+      resolve(false);
+    });
     testServer.once('listening', () => {
       testServer.close();
+      log.info(`Port ${port} is available`);
       resolve(true);
     });
     testServer.listen(port, '0.0.0.0');
@@ -25,6 +30,7 @@ function isPortAvailable(port: number): Promise<boolean> {
 }
 
 async function findAvailablePort(startPort: number): Promise<number> {
+  log.info(`Looking for available port starting from ${startPort}`);
   let port = startPort;
   while (!(await isPortAvailable(port))) {
     port++;
@@ -56,6 +62,10 @@ export async function startServer(
   pin: string;
   io: Server;
 }> {
+  log.info('Starting Express server...');
+  log.info('Remote UI path:', remoteUIPath);
+  log.info('Thumbnails directory:', thumbsDir);
+  
   const app = express();
   server = createServer(app);
   io = new Server(server, {
@@ -65,6 +75,9 @@ export async function startServer(
   currentPin = generatePin();
   thumbnailsDir = thumbsDir;
   currentPort = await findAvailablePort(3000);
+  
+  log.info(`Found available port: ${currentPort}`);
+  log.info(`Generated PIN: ${currentPin}`);
 
   // Serve remote UI at root
   app.use(express.static(remoteUIPath));
@@ -106,9 +119,20 @@ export async function startServer(
     }
   });
 
-  server.listen(currentPort, '0.0.0.0');
+  server.listen(currentPort, '0.0.0.0', () => {
+    log.info(`Server started successfully on port ${currentPort}`);
+  });
+  
+  server.on('error', (err: any) => {
+    log.error('Server error:', err);
+    if (err.code === 'EADDRINUSE') {
+      log.error(`Port ${currentPort} is already in use`);
+    }
+  });
 
   const localIP = getLocalIP();
+  log.info(`Server URL: http://${localIP}:${currentPort}`);
+  
   return {
     url: `http://${localIP}:${currentPort}`,
     pin: currentPin,

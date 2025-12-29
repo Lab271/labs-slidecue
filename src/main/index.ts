@@ -1,4 +1,5 @@
 import { app, BrowserWindow, ipcMain, dialog, protocol, net } from 'electron';
+import log from 'electron-log';
 import path from 'path';
 import os from 'os';
 import fs from 'fs/promises';
@@ -89,13 +90,15 @@ ipcMain.handle('import-presentation', async () => {
   }
 
   presentationFile = result.filePaths[0];
+  log.info('Selected presentation:', presentationFile);
 
-  // Create temp directory for thumbnails
+  // Create directory for thumbnails in app userData
+  const appDataDir = path.join(app.getPath('userData'), 'thumbnails');
   currentThumbsDir = path.join(
-    os.tmpdir(),
-    'slidecue-thumbs',
+    appDataDir,
     Date.now().toString()
   );
+  log.info('Creating thumbnails directory:', currentThumbsDir);
   await fs.mkdir(currentThumbsDir, { recursive: true });
 
   // Send progress callback
@@ -105,9 +108,11 @@ ipcMain.handle('import-presentation', async () => {
 
   // Now that we have a file selected, start the loading screen
   sendProgress(0, 5, 'Starting...');
+  log.info('Starting import process');
   
   // Export thumbnails with progress
   sendProgress(1, 5, 'Opening presentation...');
+  log.info('Opening presentation in PowerPoint');
   await automation.openPresentation(presentationFile);
   
   sendProgress(2, 5, 'Getting slide count...');
@@ -174,7 +179,8 @@ ipcMain.handle('get-slide-info', async () => {
 
 // Cleanup temp directories (synchronous for use in quit handler)
 function cleanupTempDirs() {
-  const tempBase = os.tmpdir();
+  log.info('Cleaning up thumbnail directories');
+  const tempBase = path.join(app.getPath('userData'), 'thumbnails');
   const dirsToClean = ['slidecue-thumbs', 'slidecue-presentations'];
   
   for (const dir of dirsToClean) {
