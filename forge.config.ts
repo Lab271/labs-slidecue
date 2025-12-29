@@ -9,23 +9,17 @@ const config: ForgeConfig = {
     appBundleId: 'com.lab271.slidecue',
     asar: true,
     extraResource: ['./out/remote'],
-    // Only ignore specific folders, not 'out'
-    ignore: [
-      /^\/src/,
-      /^\/resources/,
-      /^\/icon/,
-      /^\/.git/,
-      /^\/.github/,
-      /^\/\..*/, // dotfiles
-      /^\/forge\.config/,
-      /^\/electron\.vite/,
-      /^\/tsconfig/,
-      /^\/README/,
-      /^\/LICENSE/,
-      /^\/TODO/,
-      /^\/ARCHITECTURE/,
-      /^\/IMPLEMENTATION/,
-    ],
+    // Whitelist approach: only include what the app needs
+    // Return true = ignore, false = include
+    ignore: (filePath: string) => {
+      if (!filePath) return false;
+      // Always include these essential paths
+      if (filePath === '/package.json') return false;
+      if (filePath.startsWith('/out')) return false;
+      if (filePath.startsWith('/node_modules')) return false;
+      // Ignore everything else (src, config files, etc.)
+      return true;
+    },
   },
   makers: [
     new MakerSquirrel({
