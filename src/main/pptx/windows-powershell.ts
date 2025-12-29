@@ -43,12 +43,38 @@ class PowerShellBridge {
 
     log.info('[Windows] Starting PowerShell bridge');
     
-    // Get the path to the PowerShell script
-    const scriptPath = app.isPackaged
-      ? path.join(process.resourcesPath, 'powerpoint-bridge.ps1')
-      : path.join(__dirname, 'powerpoint-bridge.ps1');
+    const fs = require('fs');
+    
+    // Try multiple possible locations for the PowerShell script
+    const possiblePaths = [
+      // Packaged location
+      app.isPackaged ? path.join(process.resourcesPath, 'powerpoint-bridge.ps1') : null,
+      // Build output location
+      path.join(__dirname, 'powerpoint-bridge.ps1'),
+      // Source location (fallback for development)
+      path.join(__dirname, '..', '..', 'src', 'main', 'pptx', 'powerpoint-bridge.ps1'),
+      // Alternative source location
+      path.join(process.cwd(), 'src', 'main', 'pptx', 'powerpoint-bridge.ps1'),
+    ].filter(Boolean);
 
-    log.info('[Windows] PowerShell bridge script path:', scriptPath);
+    log.info('[Windows] __dirname:', __dirname);
+    log.info('[Windows] app.isPackaged:', app.isPackaged);
+    log.info('[Windows] process.cwd():', process.cwd());
+    
+    let scriptPath: string | null = null;
+    for (const testPath of possiblePaths) {
+      log.info('[Windows] Checking path:', testPath);
+      if (fs.existsSync(testPath)) {
+        scriptPath = testPath;
+        log.info('[Windows] Found PowerShell script at:', scriptPath);
+        break;
+      }
+    }
+    
+    if (!scriptPath) {
+      log.error('[Windows] PowerShell script not found in any of these locations:', possiblePaths);
+      throw new Error('PowerShell script not found');
+    }
 
     this.process = spawn('powershell', [
       '-NoProfile',

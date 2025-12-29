@@ -109,10 +109,6 @@ function Invoke-StartSlideshow {
         Write-Response -Status "error" -Error $_.Exception.Message
     }
 }
-    } catch {
-        Write-Response -Status "error" -Error $_.Exception.Message
-    }
-}
 
 function Invoke-NextSlide {
     try {
