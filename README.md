@@ -8,12 +8,13 @@ Control PowerPoint presentations from any device on your network.
 
 ## Features
 
-- 🎯 **Remote Control** — Control your presentation from your phone or tablet
-- 📱 **QR Code Login** — Scan to connect instantly, no typing required
-- 📝 **Speaker Notes** — View notes for current and upcoming slides
-- ⏱️ **Timer** — Track elapsed time during your presentation
-- 🔒 **PIN Protected** — Secure 4-digit PIN for each session
-- 🌙 **Dark Theme** — Easy on the eyes in any lighting
+- **Remote Control** — Control your presentation from your phone or tablet
+- **QR Code Login** — Scan to connect instantly, no typing required
+- **Speaker Notes** — View notes for current and upcoming slides
+- **Timer** — Track elapsed time during your presentation
+- **PIN Protected** — Secure 4-digit PIN for each session
+- **Dark Theme** — Clean, professional dark UI throughout
+- **Responsive Design** — Works on phones, tablets, and laptops
 
 ## Requirements
 
@@ -75,9 +76,9 @@ npm start
 | Action | Button | Keyboard |
 |--------|--------|----------|
 | Next slide/animation | Next → | Arrow Right, Space |
-| Previous slide | ← Prev | Arrow Left |
-| Go to specific slide | 🎯 Go to Slide | G |
-| Close overview | — | Escape |
+| Previous slide | ← Previous | Arrow Left |
+| Go to specific slide | Go to Slide | G |
+| Close overview | Close | Escape |
 
 ## How It Works
 
@@ -112,9 +113,10 @@ resources/
 
 ## Roadmap
 
-- [ ] Windows support (COM automation)
+- [x] Windows support (PowerShell COM automation)
+- [x] Packaged releases (.app, .exe)
 - [ ] Auto-updater
-- [ ] Packaged releases (.app, .exe)
+- [ ] Laser pointer simulation
 
 ## License
 

@@ -141,12 +141,14 @@ React application with states:
 
 Single HTML file with embedded CSS/JS:
 - PIN entry with auto-login via URL param
-- Two-column slide preview (current + next)
-- Speaker notes display
-- "Go to Slide" overview modal
-- Timer/clock display
-- Vibration feedback
-- Keyboard shortcuts
+- Symmetric two-column layout (current + next slides)
+- Speaker notes below each slide preview
+- "Go to Slide" overview modal with thumbnails
+- Timer/clock display in header
+- Vibration feedback on mobile
+- Keyboard shortcuts (arrows, space, G)
+- Responsive design (stacks vertically on mobile)
+- Clean dark theme without emojis
 
 ## Data Flow
 

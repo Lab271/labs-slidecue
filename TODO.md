@@ -81,20 +81,20 @@
 - [ ] Configure GitHub Release creation
 - [ ] Test workflow with a `v0.1.0` tag
 
-## ⏳ Phase 10: Windows Support — NOT STARTED
-- [ ] Create `src/main/pptx/windows.ts` — winax/COM implementation
-- [ ] Test on Windows with PowerPoint installed
-- [ ] Verify COM automation works
-- [ ] Test thumbnail export on Windows
-- [ ] Test slideshow control on Windows
+## ✅ Phase 10: Windows Support — COMPLETE
+- [x] Create `src/main/pptx/windows.ts` — PowerShell COM implementation
+- [x] Test on Windows with PowerPoint installed
+- [x] Verify COM automation works
+- [x] Test thumbnail export on Windows
+- [x] Test slideshow control on Windows
 
-## ⏳ Phase 11: Packaging — NOT STARTED
-- [ ] Configure electron-builder for macOS (.app, .dmg)
-- [ ] Configure electron-builder for Windows (.exe)
-- [ ] Create `icon.icns` for macOS
-- [ ] Create `icon.ico` for Windows
-- [ ] Test packaged app on macOS
-- [ ] Test packaged app on Windows
+## ✅ Phase 11: Packaging — COMPLETE
+- [x] Configure electron-forge for macOS (.app, .dmg)
+- [x] Configure electron-forge for Windows (.exe)
+- [x] Create `icon.icns` for macOS
+- [x] Create `icon.ico` for Windows
+- [x] Test packaged app on macOS
+- [x] Test packaged app on Windows
 
 ## Polish & Extras
 - [x] Loading states during thumbnail generation
@@ -106,6 +106,10 @@
 - [x] Speaker notes on remote
 - [x] Timer/clock on remote
 - [x] Haptic feedback on remote
+- [x] Symmetric two-column remote layout
+- [x] Responsive mobile design for remote
+- [x] Removed emojis for cleaner look
+- [x] Consistent design between main app and remote
 - [ ] Connection lost / reconnecting UI on remote
 - [ ] Write user documentation
 - [ ] Create demo video/GIF for README
