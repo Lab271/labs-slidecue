@@ -39,7 +39,9 @@ function Invoke-OpenPresentation {
     
     try {
         $script:pptApp = New-Object -ComObject PowerPoint.Application
+        # Open PowerPoint visible but minimized to avoid stealing focus
         $script:pptApp.Visible = 1  # msoTrue = -1, but 1 also works for visible
+        $script:pptApp.WindowState = 2  # ppWindowMinimized = 2
         $script:presentation = $script:pptApp.Presentations.Open($FilePath)
         $slideCount = $script:presentation.Slides.Count
         Write-Response -Status "success" -Data $slideCount.ToString()
