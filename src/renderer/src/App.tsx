@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import './types/electron.d.ts';
 import appIcon from './assets/icon.png';
+import sharepointQR from '../../../resources/sbp.link.sp_space.png';
 
 type AppState = 'checking' | 'no-powerpoint' | 'idle' | 'importing' | 'loaded' | 'presenting';
 
@@ -305,25 +306,63 @@ export default function App() {
             </div>
           </div>
         ) : (
-          /* Empty state - no presentation loaded */
+          /* Empty state - workflow steps */
           <div className="flex-1 flex items-center justify-center h-full">
-            <div className="max-w-md text-center">
-              <img src={appIcon} alt="SlideCue" className="w-16 h-16 rounded-xl mx-auto mb-6" />
-              <h2 className="text-2xl font-bold text-[#f8fafc] mb-3">Welcome to SlideCue</h2>
-              <p className="text-[#94a3b8] mb-8">
-                Control your PowerPoint presentations from any device on your network.
-              </p>
-              
-              <button
-                onClick={handleImport}
-                className="px-8 py-4 bg-[#3b82f6] text-white rounded-xl hover:bg-[#2563eb] transition-all font-semibold text-lg w-full mb-4"
-              >
-                Import Presentation
-              </button>
-              
-              <p className="text-[#64748b] text-sm">
-                Select a .pptx file to get started
-              </p>
+            <div className="max-w-4xl w-full">
+              <div className="text-center mb-10">
+                <img src={appIcon} alt="SlideCue" className="w-16 h-16 rounded-xl mx-auto mb-4" />
+                <h2 className="text-2xl font-bold text-[#f8fafc] mb-2">Get Started with SlideCue</h2>
+                <p className="text-[#94a3b8]">Follow these steps to present your slides</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                {/* Step 1 */}
+                <div className="bg-[#1e293b] border border-[#475569] rounded-xl p-6 text-center hover:border-[#64748b] transition-all">
+                  <div className="w-12 h-12 bg-[#3b82f6]/20 rounded-lg flex items-center justify-center mx-auto mb-4 border border-[#3b82f6]/30">
+                    <span className="text-2xl font-bold text-[#3b82f6]">1</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#f8fafc] mb-2">Get Your PPTX</h3>
+                  <p className="text-[#94a3b8] text-sm mb-4">
+                    Scan to access presentations on SharePoint
+                  </p>
+                  <div className="bg-white p-3 rounded-lg inline-block">
+                    <img src={sharepointQR} alt="SharePoint QR" className="w-28 h-28" />
+                  </div>
+                  <p className="text-xs text-[#64748b] mt-3">sbp.link/sp_space</p>
+                </div>
+
+                {/* Step 2 */}
+                <div className="bg-[#1e293b] border border-[#475569] rounded-xl p-6 text-center hover:border-[#64748b] transition-all">
+                  <div className="w-12 h-12 bg-[#8b5cf6]/20 rounded-lg flex items-center justify-center mx-auto mb-4 border border-[#8b5cf6]/30">
+                    <span className="text-2xl font-bold text-[#8b5cf6]">2</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#f8fafc] mb-2">Load Presentation</h3>
+                  <p className="text-[#94a3b8] text-sm mb-6">
+                    Import your PowerPoint file
+                  </p>
+                  <button
+                    onClick={handleImport}
+                    className="px-6 py-3 bg-[#8b5cf6] text-white rounded-lg hover:bg-[#7c3aed] transition-all font-medium w-full"
+                  >
+                    Import PPTX
+                  </button>
+                </div>
+
+                {/* Step 3 */}
+                <div className="bg-[#1e293b] border border-[#475569] rounded-xl p-6 text-center hover:border-[#64748b] transition-all">
+                  <div className="w-12 h-12 bg-[#22c55e]/20 rounded-lg flex items-center justify-center mx-auto mb-4 border border-[#22c55e]/30">
+                    <span className="text-2xl font-bold text-[#22c55e]">3</span>
+                  </div>
+                  <h3 className="text-lg font-semibold text-[#f8fafc] mb-2">Start Presenting</h3>
+                  <p className="text-[#94a3b8] text-sm mb-6">
+                    Generate QR code for remote control
+                  </p>
+                  <div className="px-6 py-3 bg-[#334155] text-[#64748b] rounded-lg font-medium cursor-not-allowed">
+                    Start Remote Control
+                  </div>
+                  <p className="text-xs text-[#64748b] mt-2">Import a file first</p>
+                </div>
+              </div>
             </div>
           </div>
         )}
