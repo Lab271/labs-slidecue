@@ -53,14 +53,15 @@ app.whenReady().then(async () => {
 
   const window = createWindow();
 
-  // Check PowerPoint on startup
-  const isPPTInstalled = await automation.checkInstalled();
-  if (!isPPTInstalled) {
-    dialog.showErrorBox(
-      'PowerPoint Not Found',
-      'Microsoft PowerPoint is required to run presentations. Please install PowerPoint and restart SlideCue.'
-    );
-  }
+  // Check PowerPoint on startup (non-blocking)
+  automation.checkInstalled().then(isPPTInstalled => {
+    if (!isPPTInstalled) {
+      dialog.showErrorBox(
+        'PowerPoint Not Found',
+        'Microsoft PowerPoint is required to run presentations. Please install PowerPoint and restart SlideCue.'
+      );
+    }
+  });
 
   // Setup auto-updater (production only)
   if (process.env.NODE_ENV !== 'development') {
@@ -180,17 +181,31 @@ ipcMain.handle('get-slide-info', async () => {
 // Cleanup temp directories (synchronous for use in quit handler)
 function cleanupTempDirs() {
   log.info('Cleaning up thumbnail directories');
-  const tempBase = path.join(app.getPath('userData'), 'thumbnails');
-  const dirsToClean = ['slidecue-thumbs', 'slidecue-presentations'];
+  const thumbsDir = path.join(app.getPath('userData'), 'thumbnails');
+  const tempPresentationsDir = path.join(os.tmpdir(), 'slidecue-presentations');
   
-  for (const dir of dirsToClean) {
-    const dirPath = path.join(tempBase, dir);
-    try {
-      fsSync.rmSync(dirPath, { recursive: true, force: true });
-      console.log(`Cleaned up: ${dirPath}`);
-    } catch (e) {
-      // Ignore errors - directory might not exist
+  // Clean all thumbnail subdirectories
+  try {
+    if (fsSync.existsSync(thumbsDir)) {
+      const entries = fsSync.readdirSync(thumbsDir);
+      for (const entry of entries) {
+        const entryPath = path.join(thumbsDir, entry);
+        fsSync.rmSync(entryPath, { recursive: true, force: true });
+        log.info(`Cleaned up: ${entryPath}`);
+      }
     }
+  } catch (e) {
+    log.error('Error cleaning thumbnails:', e);
+  }
+  
+  // Clean temp presentations
+  try {
+    if (fsSync.existsSync(tempPresentationsDir)) {
+      fsSync.rmSync(tempPresentationsDir, { recursive: true, force: true });
+      log.info(`Cleaned up: ${tempPresentationsDir}`);
+    }
+  } catch (e) {
+    log.error('Error cleaning temp presentations:', e);
   }
 }
 

@@ -4,8 +4,14 @@ import { io, Socket } from 'socket.io-client';
 type ViewMode = 'current' | 'next';
 
 interface SlideInfo {
-  current: number;
-  total: number;
+  currentSlide: number;
+  totalSlides: number;
+  nextVisibleSlide: number | null;
+  animationStep: number;
+  animationsOnSlide: number;
+  isLastSlide: boolean;
+  currentNotes: string;
+  nextNotes: string;
 }
 
 export default function App() {
@@ -13,7 +19,16 @@ export default function App() {
   const [authenticated, setAuthenticated] = useState(false);
   const [error, setError] = useState('');
   const [connecting, setConnecting] = useState(false);
-  const [slideInfo, setSlideInfo] = useState<SlideInfo>({ current: 1, total: 1 });
+  const [slideInfo, setSlideInfo] = useState<SlideInfo>({
+    currentSlide: 1,
+    totalSlides: 1,
+    nextVisibleSlide: null,
+    animationStep: 0,
+    animationsOnSlide: 0,
+    isLastSlide: false,
+    currentNotes: '',
+    nextNotes: ''
+  });
   const [viewMode, setViewMode] = useState<ViewMode>('next');
   const socketRef = useRef<Socket | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -123,8 +138,8 @@ export default function App() {
 
   const previewSlide =
     viewMode === 'current'
-      ? slideInfo.current
-      : Math.min(slideInfo.current + 1, slideInfo.total);
+      ? slideInfo.currentSlide
+      : (slideInfo.nextVisibleSlide || slideInfo.currentSlide);
 
   return (
     <div className="flex flex-col h-screen bg-gray-100">
@@ -166,7 +181,7 @@ export default function App() {
       {/* Slide Counter */}
       <div className="text-center py-3">
         <span className="text-2xl font-bold text-gray-800">
-          {slideInfo.current} / {slideInfo.total}
+          {slideInfo.currentSlide} / {slideInfo.totalSlides}
         </span>
       </div>
 
@@ -174,14 +189,14 @@ export default function App() {
       <div className="grid grid-cols-2 gap-3 p-4 pb-8">
         <button
           onClick={handlePrev}
-          disabled={slideInfo.current <= 1}
+          disabled={slideInfo.currentSlide <= 1}
           className="py-6 bg-gray-800 text-white text-xl font-semibold rounded-xl disabled:opacity-30 active:bg-gray-700 transition-colors"
         >
           ← Previous
         </button>
         <button
           onClick={handleNext}
-          disabled={slideInfo.current >= slideInfo.total}
+          disabled={slideInfo.isLastSlide}
           className="py-6 bg-blue-600 text-white text-xl font-semibold rounded-xl disabled:opacity-30 active:bg-blue-700 transition-colors"
         >
           Next →
