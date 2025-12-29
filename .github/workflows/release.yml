@@ -59,6 +59,13 @@ jobs:
       - name: Build app
         run: npm run build
 
+      - name: Verify build output
+        run: |
+          echo "Checking out directory:"
+          dir out
+          dir out\main
+          type package.json | findstr main
+
       - name: Package with Forge
         run: npm run make
         env:
