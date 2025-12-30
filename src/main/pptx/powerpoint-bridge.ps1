@@ -166,31 +166,6 @@ function Invoke-StartSlideshow {
         # Wait for slideshow to initialize
         Start-Sleep -Milliseconds 500
         
-        # Bring slideshow window to foreground
-        try {
-            Add-Type @"
-                using System;
-                using System.Runtime.InteropServices;
-                public class ForegroundWindow {
-                    [DllImport("user32.dll")]
-                    public static extern bool SetForegroundWindow(IntPtr hWnd);
-                    [DllImport("user32.dll")]
-                    public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-                    [DllImport("user32.dll")]
-                    public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-                }
-"@
-        } catch {
-            # Type may already be added, ignore
-        }
-        
-        # Find and activate the slideshow window
-        $pptProcess = Get-Process | Where-Object { $_.ProcessName -eq "POWERPNT" } | Select-Object -First 1
-        if ($pptProcess -and $pptProcess.MainWindowHandle) {
-            [ForegroundWindow]::ShowWindow($pptProcess.MainWindowHandle, 9)  # SW_RESTORE = 9
-            [ForegroundWindow]::SetForegroundWindow($pptProcess.MainWindowHandle)
-        }
-        
         # Try to set to windowed mode after starting
         try {
             if ($script:slideShow.View.State -eq 1) {  # ppSlideShowRunning
