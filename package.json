@@ -1,6 +1,6 @@
 {
   "name": "slidecue",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Control PowerPoint presentations from any device on your network",
   "main": "out/main/index.js",
   "scripts": {
@@ -81,7 +81,8 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-Setup-${version}.${ext}"
     },
     "publish": {
       "provider": "github",
