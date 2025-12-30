@@ -537,16 +537,19 @@
     
     .overview-grid {
       flex: 1;
-      overflow-y: auto;
+      overflow-x: auto;
+      overflow-y: hidden;
       -webkit-overflow-scrolling: touch;
       padding: 0.75rem;
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+      display: flex;
+      flex-direction: row;
       gap: 0.5rem;
-      align-content: start;
+      align-items: center;
     }
     
     .overview-slide {
+      flex-shrink: 0;
+      width: 160px;
       background: var(--bg-secondary);
       border: 2px solid var(--border);
       border-radius: 0.5rem;
@@ -929,6 +932,14 @@
     function openOverview() {
       buildOverviewGrid();
       overviewModal.classList.add('active');
+      
+      // Scroll to current slide
+      setTimeout(() => {
+        const currentSlideEl = overviewGrid.querySelector('.overview-slide.current');
+        if (currentSlideEl) {
+          currentSlideEl.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'center' });
+        }
+      }, 50);
     }
     
     function closeOverview() {
