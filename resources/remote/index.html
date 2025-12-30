@@ -201,60 +201,49 @@
       font-size: 0.75rem;
     }
     
-    /* Main content - two equal columns */
+    /* Main content - 2x2 grid layout */
     .main-content {
       flex: 1;
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
-      padding: 0.75rem;
+      grid-template-rows: 1fr 1fr;
+      gap: 0.5rem;
+      padding: 0.5rem;
       overflow: hidden;
       min-height: 0;
     }
     
-    /* Each slide column */
-    .slide-column {
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
+    /* Current slide preview - spans both columns */
+    .current-slide-area {
+      grid-column: 1 / -1;
       background: var(--bg-secondary);
       border: 1px solid var(--border);
       border-radius: 0.75rem;
       overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
     }
     
-    .slide-column.current-column {
-      border-color: var(--border);
-    }
-    
-    .slide-column.next-column {
-      border-color: var(--success);
-      border-width: 2px;
-    }
-    
-    .column-header {
+    .slide-header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0.5rem 0.75rem;
+      padding: 0.375rem 0.75rem;
       background: var(--bg-card);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
     
-    .column-label {
-      font-size: 0.6875rem;
+    .slide-label {
+      font-size: 0.625rem;
       font-weight: 600;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: var(--text-muted);
     }
     
-    .next-column .column-label {
-      color: var(--success);
-    }
-    
-    .column-number {
+    .slide-number {
       font-weight: 700;
       font-size: 0.875rem;
       color: var(--accent);
@@ -262,14 +251,14 @@
     
     /* Slide preview */
     .slide-preview {
+      flex: 1;
       background: #000;
       display: flex;
       align-items: center;
       justify-content: center;
-      aspect-ratio: 16 / 9;
-      flex-shrink: 0;
       overflow: hidden;
       position: relative;
+      min-height: 0;
     }
     
     .slide-preview img {
@@ -289,21 +278,18 @@
       color: var(--text-muted);
     }
     
-    .placeholder-icon {
-      font-size: 2rem;
-      margin-bottom: 0.5rem;
-    }
-    
     .placeholder-text {
       font-size: 0.75rem;
     }
     
-    /* Notes section */
-    .notes-section {
-      flex: 1;
+    /* Notes section - bottom left */
+    .notes-area {
       display: flex;
       flex-direction: column;
       min-height: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 0.75rem;
       overflow: hidden;
     }
     
@@ -312,7 +298,6 @@
       align-items: center;
       padding: 0.375rem 0.75rem;
       background: var(--bg-card);
-      border-top: 1px solid var(--border);
       border-bottom: 1px solid var(--border);
       flex-shrink: 0;
     }
@@ -330,8 +315,8 @@
       overflow-y: auto;
       -webkit-overflow-scrolling: touch;
       padding: 0.75rem;
-      font-size: 0.875rem;
-      line-height: 1.5;
+      font-size: 0.9375rem;
+      line-height: 1.6;
       color: var(--text-secondary);
       white-space: pre-wrap;
     }
@@ -344,14 +329,63 @@
       justify-content: center;
     }
     
-    /* End state for next column */
-    .end-state {
+    /* Next slide section - bottom right */
+    .next-slide-area {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      background: var(--bg-secondary);
+      border: 1px solid var(--success);
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+    
+    .next-slide-area .slide-header {
+      border-bottom-color: var(--border);
+    }
+    
+    .next-slide-area .slide-label {
+      color: var(--success);
+    }
+    
+    .next-slide-area .slide-number {
+      color: var(--success);
+    }
+    
+    .next-slide-preview {
       flex: 1;
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      position: relative;
+    }
+    
+    .next-slide-preview img {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    
+    .next-slide-preview .placeholder {
+      color: var(--text-muted);
+      font-size: 0.75rem;
+    }
+    
+    /* End state - bottom right */
+    .end-state-area {
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 1.5rem;
+      background: var(--bg-secondary);
+      border: 1px solid var(--success);
+      border-radius: 0.75rem;
+      padding: 1rem;
       text-align: center;
     }
     
@@ -360,22 +394,21 @@
       height: 48px;
       background: linear-gradient(135deg, var(--success) 0%, #16a34a 100%);
       border-radius: 50%;
-      margin-bottom: 0.75rem;
       display: flex;
       align-items: center;
       justify-content: center;
       font-size: 1.5rem;
+      margin-bottom: 0.5rem;
     }
     
     .end-title {
       font-size: 1rem;
       font-weight: 600;
-      margin-bottom: 0.25rem;
     }
     
     .end-subtitle {
       color: var(--text-muted);
-      font-size: 0.8125rem;
+      font-size: 0.75rem;
     }
     
     /* Navigation */
@@ -442,42 +475,7 @@
       font-size: 0.875rem;
     }
     
-    /* Mobile responsive - stack columns vertically */
-    @media (max-width: 768px) {
-      .main-content {
-        grid-template-columns: 1fr;
-        gap: 0.5rem;
-        padding: 0.5rem;
-      }
-      
-      .slide-column {
-        max-height: none;
-      }
-      
-      .slide-preview {
-        aspect-ratio: 16 / 9;
-      }
-      
-      .notes-content {
-        max-height: 120px;
-      }
-      
-      .nav-section {
-        padding: 0.5rem;
-        padding-bottom: calc(0.5rem + env(safe-area-inset-bottom));
-      }
-      
-      .nav-buttons {
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
-      }
-      
-      .nav-btn {
-        padding: 0.875rem 1rem;
-      }
-    }
-    
-    /* Very small screens - hide next slide notes */
+    /* Mobile responsive */
     @media (max-width: 480px) {
       .header-title {
         font-size: 0.875rem;
@@ -492,8 +490,8 @@
       }
       
       .notes-content {
-        max-height: 80px;
-        font-size: 0.8125rem;
+        font-size: 0.875rem;
+        padding: 0.5rem;
       }
     }
     
@@ -638,11 +636,11 @@
     </div>
     
     <div class="main-content">
-      <!-- Current Slide Column -->
-      <div class="slide-column current-column">
-        <div class="column-header">
-          <span class="column-label">Current</span>
-          <span class="column-number" id="current-slide-num">1</span>
+      <!-- Current Slide - Top (spans both columns) -->
+      <div class="current-slide-area">
+        <div class="slide-header">
+          <span class="slide-label">Current Slide</span>
+          <span class="slide-number" id="current-slide-num">1</span>
         </div>
         <div class="slide-preview" id="current-preview">
           <img id="current-img" src="" alt="Current slide" style="display:none;" />
@@ -650,45 +648,35 @@
             <div class="placeholder-text">Loading...</div>
           </div>
         </div>
-        <div class="notes-section">
-          <div class="notes-header">
-            <span class="notes-label">Speaker Notes</span>
-          </div>
-          <div class="notes-content" id="current-notes">No notes</div>
-        </div>
       </div>
       
-      <!-- Next Slide Column -->
-      <div class="slide-column next-column" id="next-column">
-        <div class="column-header">
-          <span class="column-label">Up Next</span>
-          <span class="column-number" id="next-slide-num">2</span>
+      <!-- Speaker Notes - Bottom Left -->
+      <div class="notes-area">
+        <div class="notes-header">
+          <span class="notes-label">Speaker Notes</span>
         </div>
-        <div class="slide-preview" id="next-preview">
+        <div class="notes-content" id="current-notes">No notes</div>
+      </div>
+      
+      <!-- Next Slide - Bottom Right -->
+      <div class="next-slide-area" id="next-area">
+        <div class="slide-header">
+          <span class="slide-label">Up Next</span>
+          <span class="slide-number" id="next-slide-num">2</span>
+        </div>
+        <div class="next-slide-preview" id="next-preview">
           <img id="next-img" src="" alt="Next slide" style="display:none;" />
           <div class="placeholder" id="next-placeholder">
-            <div class="placeholder-text">Loading...</div>
+            <span class="placeholder-text">Loading</span>
           </div>
-        </div>
-        <div class="notes-section" id="next-notes-section">
-          <div class="notes-header">
-            <span class="notes-label">Coming Up</span>
-          </div>
-          <div class="notes-content" id="next-notes">No notes</div>
         </div>
       </div>
       
-      <!-- End State Column (hidden by default) -->
-      <div class="slide-column next-column" id="end-column" style="display:none;">
-        <div class="column-header">
-          <span class="column-label">Finished</span>
-          <span class="column-number">✓</span>
-        </div>
-        <div class="end-state">
-          <div class="end-icon">✓</div>
-          <div class="end-title">Last Slide</div>
-          <div class="end-subtitle">You've reached the end</div>
-        </div>
+      <!-- End State - Bottom Right (hidden by default) -->
+      <div class="end-state-area" id="end-area" style="display:none;">
+        <div class="end-icon">✓</div>
+        <div class="end-title">Last Slide</div>
+        <div class="end-subtitle">You've reached the end</div>
       </div>
     </div>
     
@@ -736,12 +724,10 @@
     const currentPlaceholder = document.getElementById('current-placeholder');
     const currentNotes = document.getElementById('current-notes');
     
-    const nextColumn = document.getElementById('next-column');
+    const nextArea = document.getElementById('next-area');
     const nextImg = document.getElementById('next-img');
     const nextPlaceholder = document.getElementById('next-placeholder');
-    const nextNotes = document.getElementById('next-notes');
-    const nextNotesSection = document.getElementById('next-notes-section');
-    const endColumn = document.getElementById('end-column');
+    const endArea = document.getElementById('end-area');
     
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
@@ -885,23 +871,14 @@
       
       // Next slide / End state
       if (slideInfo.isLastSlide) {
-        nextColumn.style.display = 'none';
-        endColumn.style.display = 'flex';
+        nextArea.style.display = 'none';
+        endArea.style.display = 'flex';
       } else {
-        nextColumn.style.display = 'flex';
-        endColumn.style.display = 'none';
+        nextArea.style.display = 'flex';
+        endArea.style.display = 'none';
         
         nextSlideNum.textContent = slideInfo.nextVisibleSlide || '—';
         loadImage(nextImg, nextPlaceholder, slideInfo.nextVisibleSlide, 'None');
-        
-        // Next notes
-        if (slideInfo.nextNotes && slideInfo.nextNotes.trim()) {
-          nextNotes.textContent = slideInfo.nextNotes;
-          nextNotes.classList.remove('empty');
-        } else {
-          nextNotes.textContent = 'No speaker notes';
-          nextNotes.classList.add('empty');
-        }
       }
       
       // Button states
