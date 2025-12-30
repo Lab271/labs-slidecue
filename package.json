@@ -1,6 +1,6 @@
 {
   "name": "slidecue",
-  "version": "0.6.3",
+  "version": "0.6.4",
   "description": "Control PowerPoint presentations from any device on your network",
   "main": "out/main/index.js",
   "scripts": {
@@ -47,6 +47,10 @@
       {
         "from": "src/main/pptx/powerpoint-bridge.ps1",
         "to": "powerpoint-bridge.ps1"
+      },
+      {
+        "from": "resources/icon.png",
+        "to": "icon.png"
       }
     ],
     "mac": {

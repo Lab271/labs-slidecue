@@ -6,6 +6,7 @@ import { readdir } from 'fs/promises';
 import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import log from 'electron-log';
+import { app as electronApp } from 'electron';
 
 let server: ReturnType<typeof createServer> | null = null;
 let io: Server | null = null;
@@ -84,9 +85,11 @@ export async function startServer(
 
   // Serve the app icon
   app.get('/icon.png', (_req, res) => {
-    // In development, serve from resources folder
-    // In production, serve from app resources
-    const iconPath = join(process.cwd(), 'resources', 'icon.png');
+    // In packaged app, serve from resources; in dev, from project root
+    const iconPath = electronApp.isPackaged 
+      ? join(process.resourcesPath, 'icon.png')
+      : join(process.cwd(), 'resources', 'icon.png');
+    log.info('Serving icon from:', iconPath);
     res.sendFile(iconPath);
   });
 
