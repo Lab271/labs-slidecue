@@ -100,13 +100,8 @@ export function setupAutoUpdater(mainWindow: BrowserWindow) {
 
   autoUpdater.on('error', (error) => {
     log.error('[Updater] Auto-updater error:', error.message, error.stack);
-    // Show error dialog for debugging
-    dialog.showMessageBox(mainWindow, {
-      type: 'error',
-      title: 'Update Error',
-      message: 'Failed to check for updates',
-      detail: error.message,
-    });
+    // Only log errors, don't show dialog to user as it's disruptive
+    // Network errors and 404s are expected when releases repo doesn't have new versions
   });
 
   // Check for updates after a short delay

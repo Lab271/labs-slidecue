@@ -9,6 +9,11 @@ import { startServer, stopServer, getLocalIP } from './server';
 import { setupSocketHandlers } from './server/socket';
 import { setupAutoUpdater } from './updater';
 
+// Disable hardware acceleration on Windows to prevent mouse lag
+if (process.platform === 'win32') {
+  app.disableHardwareAcceleration();
+}
+
 let mainWindow: BrowserWindow | null = null;
 let presentationFile: string | null = null;
 let thumbnailPaths: string[] = [];
