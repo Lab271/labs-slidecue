@@ -125,12 +125,23 @@ function Invoke-ExportThumbnails {
             return
         }
         
+        # Get slide dimensions from PageSetup (in points, 72 points = 1 inch)
+        $slideWidth = $script:presentation.PageSetup.SlideWidth
+        $slideHeight = $script:presentation.PageSetup.SlideHeight
+        
+        # Calculate export dimensions maintaining aspect ratio
+        # Target max width of 1920 pixels
+        $maxWidth = 1920
+        $aspectRatio = $slideWidth / $slideHeight
+        $exportWidth = $maxWidth
+        $exportHeight = [int]($maxWidth / $aspectRatio)
+        
         $count = $script:presentation.Slides.Count
         for ($i = 1; $i -le $count; $i++) {
             $slide = $script:presentation.Slides.Item($i)
             $fileName = "slide_" + $i.ToString("000") + ".png"
             $filePath = Join-Path $OutputDir $fileName
-            $slide.Export($filePath, "PNG", 1920, 1080)
+            $slide.Export($filePath, "PNG", $exportWidth, $exportHeight)
         }
         Write-Response -Status "success" -Data $count.ToString()
     } catch {
