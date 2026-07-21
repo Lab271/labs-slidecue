@@ -31,7 +31,7 @@ jobs:
 
       - name: Fix latest-mac.yml URLs
         run: |
-          sed -i '' 's|LAB271/SlideCue/releases|LAB271/SlideCue-releases/releases|g' dist/latest-mac.yml
+          sed -i '' 's|LAB271/slide-cue/releases|LAB271/slide-cue-releases/releases|g' dist/latest-mac.yml
           cat dist/latest-mac.yml
 
       - name: Upload macOS artifacts
@@ -73,7 +73,7 @@ jobs:
 
       - name: Fix latest.yml URLs
         run: |
-          (Get-Content dist/latest.yml) -replace 'LAB271/SlideCue/releases', 'LAB271/SlideCue-releases/releases' | Set-Content dist/latest.yml
+          (Get-Content dist/latest.yml) -replace 'LAB271/slide-cue/releases', 'LAB271/slide-cue-releases/releases' | Set-Content dist/latest.yml
           Get-Content dist/latest.yml
         shell: pwsh
 
@@ -121,7 +121,7 @@ jobs:
       - name: Create Release in public releases repo
         uses: softprops/action-gh-release@v2
         with:
-          repository: LAB271/SlideCue-releases
+          repository: LAB271/slide-cue-releases
           tag_name: ${{ github.ref_name }}
           name: SlideCue ${{ github.ref_name }}
           files: |
