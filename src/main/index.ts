@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025-2026 Schuberg Philis / Lab271
 import { app, BrowserWindow, ipcMain, dialog, protocol, net } from 'electron';
 import log from 'electron-log';
 import path from 'path';

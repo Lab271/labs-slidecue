@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025-2026 Schuberg Philis / Lab271
 // Simple test server for remote UI development
 // Run with: node test-remote.js
 // Then open: http://localhost:3333?demo=true

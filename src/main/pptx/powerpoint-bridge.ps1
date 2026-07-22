@@ -1,3 +1,5 @@
+# SPDX-License-Identifier: Apache-2.0
+# SPDX-FileCopyrightText: 2025-2026 Schuberg Philis / Lab271
 # PowerPoint COM Bridge - Maintains PowerPoint COM objects and responds to commands via JSON
 # This script runs continuously and accepts commands via stdin, responds via stdout
 

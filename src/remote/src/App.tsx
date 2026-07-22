@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025-2026 Schuberg Philis / Lab271
 import { useState, useEffect, useRef } from 'react';
 import { io, Socket } from 'socket.io-client';
 

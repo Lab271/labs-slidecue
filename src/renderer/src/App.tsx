@@ -1,3 +1,5 @@
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2025-2026 Schuberg Philis / Lab271
 import { useState, useEffect } from 'react';
 import { QRCodeSVG } from 'qrcode.react';
 import './types/electron.d.ts';
