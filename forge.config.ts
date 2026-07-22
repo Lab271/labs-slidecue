@@ -29,8 +29,8 @@ const config: ForgeConfig = {
       name: '@electron-forge/publisher-github',
       config: {
         repository: {
-          owner: 'LAB271',
-          name: 'SlideCue',
+          owner: 'Lab271',
+          name: 'labs-slidecue',
         },
         prerelease: false,
       },

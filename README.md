@@ -120,4 +120,4 @@ resources/
 
 ## License
 
-MIT
+Licensed under the [Apache License 2.0](LICENSE). Copyright © 2025-2026 Schuberg Philis / Lab271. See [NOTICE](NOTICE).

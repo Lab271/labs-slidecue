@@ -29,11 +29,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fix latest-mac.yml URLs
-        run: |
-          sed -i '' 's|LAB271/slide-cue/releases|LAB271/slide-cue-releases/releases|g' dist/latest-mac.yml
-          cat dist/latest-mac.yml
-
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -71,12 +66,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Fix latest.yml URLs
-        run: |
-          (Get-Content dist/latest.yml) -replace 'LAB271/slide-cue/releases', 'LAB271/slide-cue-releases/releases' | Set-Content dist/latest.yml
-          Get-Content dist/latest.yml
-        shell: pwsh
-
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -107,22 +96,9 @@ jobs:
       - name: List files
         run: find ./artifacts -type f
 
-      - name: Create Release in source repo
+      - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            ./artifacts/mac/*.dmg
-            ./artifacts/mac/*.zip
-            ./artifacts/win/*.exe
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Create Release in public releases repo
-        uses: softprops/action-gh-release@v2
-        with:
-          repository: LAB271/slide-cue-releases
-          tag_name: ${{ github.ref_name }}
           name: SlideCue ${{ github.ref_name }}
           files: |
             ./artifacts/mac/*.dmg
@@ -132,4 +108,4 @@ jobs:
             ./artifacts/win/*.yml
           generate_release_notes: true
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASES_REPO_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

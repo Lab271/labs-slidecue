@@ -19,15 +19,15 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/LAB271/slide-cue.git"
+    "url": "git+https://github.com/Lab271/labs-slidecue.git"
   },
   "keywords": [],
   "author": "",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/LAB271/slide-cue/issues"
+    "url": "https://github.com/Lab271/labs-slidecue/issues"
   },
-  "homepage": "https://github.com/LAB271/slide-cue#readme",
+  "homepage": "https://github.com/Lab271/labs-slidecue#readme",
   "build": {
     "appId": "com.lab271.slidecue",
     "productName": "SlideCue",
@@ -90,8 +90,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "LAB271",
-      "repo": "slide-cue"
+      "owner": "Lab271",
+      "repo": "labs-slidecue"
     }
   },
   "dependencies": {

@@ -2,12 +2,10 @@ import { autoUpdater } from 'electron-updater';
 import { app, BrowserWindow, dialog } from 'electron';
 import log from 'electron-log';
 
-// Configure for public releases repo
-// Create a PUBLIC repo called "slide-cue-releases" to host your releases
-// This allows auto-updates to work without exposing your private source code
+// Auto-updates pull from this repository's own public GitHub releases.
 const RELEASES_REPO = {
-  owner: 'LAB271',
-  repo: 'slide-cue-releases',
+  owner: 'Lab271',
+  repo: 'labs-slidecue',
 };
 
 export function setupAutoUpdater(mainWindow: BrowserWindow) {
