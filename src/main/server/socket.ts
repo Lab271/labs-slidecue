@@ -2,9 +2,11 @@
 // SPDX-FileCopyrightText: 2025-2026 Schuberg Philis / Lab271
 import { Server } from 'socket.io';
 import { getAutomation } from '../pptx/automation';
+import { PowerPointAutomation } from '../pptx/types';
 import log from 'electron-log';
 
 let pollInterval: NodeJS.Timeout | null = null;
+let pollInFlight: Promise<void> | null = null;
 let lastSlideNumber = 1;
 
 export function setupSocketHandlers(io: Server) {
@@ -60,27 +62,39 @@ export function setupSocketHandlers(io: Server) {
     });
   });
 }
-function startSlidePolling(io: Server, automation: any) {
+function startSlidePolling(io: Server, automation: PowerPointAutomation) {
   // Stop existing poll if any
   if (pollInterval) {
     clearInterval(pollInterval);
   }
 
-  // Poll every 500ms for slide changes
-  pollInterval = setInterval(async () => {
-    try {
-      const info = await automation.getSlideInfo();
-      
-      // Only emit if slide actually changed
-      if (info.currentSlide !== lastSlideNumber) {
-        log.info(`Slide changed from ${lastSlideNumber} to ${info.currentSlide}`);
-        lastSlideNumber = info.currentSlide;
-        io.emit('slide-changed', info);
-      }
-    } catch {
-      // Ignore errors during polling
+  // Poll every 500ms for slide changes. Automation calls are serialized per
+  // backend, so a poll that outlives its tick would queue behind the next one
+  // and behind every remote command instead of overlapping with them - skip the
+  // tick rather than let the backlog grow.
+  pollInterval = setInterval(() => {
+    if (pollInFlight) {
+      return;
     }
+    pollInFlight = pollOnce(io, automation).finally(() => {
+      pollInFlight = null;
+    });
   }, 500);
+}
+
+async function pollOnce(io: Server, automation: PowerPointAutomation): Promise<void> {
+  try {
+    const info = await automation.getSlideInfo();
+
+    // Only emit if slide actually changed
+    if (info.currentSlide !== lastSlideNumber) {
+      log.info(`Slide changed from ${lastSlideNumber} to ${info.currentSlide}`);
+      lastSlideNumber = info.currentSlide;
+      io.emit('slide-changed', info);
+    }
+  } catch {
+    // Ignore errors during polling
+  }
 }
 
 export function stopSlidePolling() {

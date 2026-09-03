@@ -8,6 +8,7 @@ import path from 'path';
 import log from 'electron-log';
 import { app } from 'electron';
 import { PowerPointAutomation, SlideInfo, SlideMetadata, ProgressCallback } from './types';
+import { serializeAutomation } from './serialize';
 import { PresentationData, getNextVisibleSlide, getSlideData } from './slideParser';
 
 interface PSCommand {
@@ -214,7 +215,7 @@ let currentAnimationStep = 0;
 let totalSlides = 1;
 let localPresentationCopy = '';
 
-export const windowsAutomation: PowerPointAutomation = {
+const powerShellBackend: PowerPointAutomation = {
   async checkInstalled() {
     try {
       log.info('[Windows] Checking if PowerPoint is installed');
@@ -378,10 +379,11 @@ export const windowsAutomation: PowerPointAutomation = {
 
   async nextSlide() {
     try {
-      const slideData = presentationData ? getSlideData(currentSlide, presentationData) : null;
+      const slideBefore = currentSlide;
+      const slideData = presentationData ? getSlideData(slideBefore, presentationData) : null;
       const animationsOnSlide = slideData?.animationClicks || 0;
       
-      log.info('[Windows] Next slide (current:', currentSlide, 'animation:', currentAnimationStep, '/', animationsOnSlide, ')');
+      log.info('[Windows] Next slide (current:', slideBefore, 'animation:', currentAnimationStep, '/', animationsOnSlide, ')');
       
       const response = await bridge.sendCommand({ action: 'next' });
       
@@ -390,15 +392,27 @@ export const windowsAutomation: PowerPointAutomation = {
         return;
       }
       
+      // Read the state back after the await instead of reusing the snapshot
+      // taken above, then write both fields in one synchronous block. The
+      // serializer already stops another command from landing in between; the
+      // re-read is what makes that checkable rather than assumed.
       const newSlide = parseInt(response.data || String(currentSlide), 10);
+      const slideChanged = newSlide !== currentSlide;
+      let newStep = currentAnimationStep;
       
-      // Check if we advanced an animation or moved to next slide
-      if (newSlide !== currentSlide) {
-        currentSlide = newSlide;
-        currentAnimationStep = 0;
+      // Either we advanced an animation or we moved to the next slide.
+      if (slideChanged) {
+        newStep = 0;
+      } else if (newStep < animationsOnSlide) {
+        newStep++;
+      }
+      
+      currentSlide = newSlide;
+      currentAnimationStep = newStep;
+      
+      if (slideChanged) {
         log.info('[Windows] Moved to slide', currentSlide);
-      } else if (currentAnimationStep < animationsOnSlide) {
-        currentAnimationStep++;
+      } else {
         log.info('[Windows] Animation', currentAnimationStep, '/', animationsOnSlide, 'on slide', currentSlide);
       }
     } catch (error) {
@@ -417,7 +431,11 @@ export const windowsAutomation: PowerPointAutomation = {
         return;
       }
       
-      currentSlide = parseInt(response.data || String(currentSlide), 10);
+      // Re-read the state after the await rather than reusing the value logged
+      // above, so the assignment cannot be based on the pre-command position.
+      const slideBefore = currentSlide;
+      const newSlide = parseInt(response.data || String(slideBefore), 10);
+      currentSlide = newSlide;
       currentAnimationStep = 0;
       log.info('[Windows] Moved to slide', currentSlide);
     } catch (error) {
@@ -523,15 +541,17 @@ export const windowsAutomation: PowerPointAutomation = {
       // Stop the bridge
       await bridge.stop();
       
-      // Clean up temp copy
-      if (localPresentationCopy) {
+      // Clean up temp copy. The path is cleared before the unlink is awaited,
+      // so the field is never left pointing at a file that is on its way out.
+      const tempCopy = localPresentationCopy;
+      if (tempCopy) {
+        localPresentationCopy = '';
         try {
-          await unlink(localPresentationCopy);
+          await unlink(tempCopy);
           log.info('[Windows] Deleted temp presentation copy');
         } catch (error) {
           log.error('[Windows] Failed to delete temp copy:', error);
         }
-        localPresentationCopy = '';
       }
       
       // Reset state
@@ -544,3 +564,7 @@ export const windowsAutomation: PowerPointAutomation = {
     }
   },
 };
+
+// One command at a time: the module-level state above is only consistent if
+// nothing interleaves with it. See serialize.ts.
+export const windowsAutomation = serializeAutomation(powerShellBackend);
