@@ -31,3 +31,51 @@ jobs:
 
       - name: Unit tests
         run: npm test
+
+      # Regression guard. `npm pack` once produced a 3.9 MB tarball containing no
+      # application code at all (see #59), and nothing here would have noticed --
+      # CI never packs, and the release workflow ships electron-builder installers
+      # rather than the npm tarball. So assert the contents directly.
+      #
+      # This inspects the real tarball rather than `npm pack --dry-run --json`,
+      # because `prepack` runs `npm run build` and electron-vite writes its progress
+      # to stdout, which corrupts the `--json` output.
+      #
+      # It doubles as the only check that `npm run build` still succeeds, since
+      # `prepack` has to run before a tarball exists at all.
+      - name: Pack check
+        run: |
+          mkdir -p /tmp/packcheck
+          npm pack --pack-destination /tmp/packcheck
+          tar -tzf /tmp/packcheck/*.tgz | sed 's|^package/||' | sort > /tmp/packcheck/list.txt
+          echo "Packed files:"
+          sed 's/^/  /' /tmp/packcheck/list.txt
+
+          status=0
+
+          # Must ship: the entry point npm advertises, plus the renderer, preload and
+          # web remote UI the app loads at runtime.
+          for required in \
+            "$(node -p 'require("./package.json").main')" \
+            out/preload/index.js \
+            out/renderer/index.html \
+            resources/remote/index.html
+          do
+            if ! grep -qxF "$required" /tmp/packcheck/list.txt; then
+              echo "::error::npm pack is missing $required"
+              status=1
+            fi
+          done
+
+          # Must not ship: design source and application source. Both were packed at
+          # some point, icon/ because npm packs everything by default and src/ never,
+          # because a stale .npmignore excluded it. Catch a slide back either way.
+          for forbidden in icon/ src/ node_modules/ test/
+          do
+            if grep -q "^$forbidden" /tmp/packcheck/list.txt; then
+              echo "::error::npm pack should not ship $forbidden"
+              status=1
+            fi
+          done
+
+          exit $status
