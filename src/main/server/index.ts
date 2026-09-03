@@ -5,8 +5,7 @@ import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { networkInterfaces } from 'os';
 import { readdir } from 'fs/promises';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
+import { join } from 'path';
 import log from 'electron-log';
 import { app as electronApp } from 'electron';
 

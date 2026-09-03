@@ -124,7 +124,7 @@ ipcMain.handle('import-presentation', async () => {
   await automation.openPresentation(presentationFile);
   
   sendProgress(2, 5, 'Getting slide count...');
-  const slideInfo = await automation.getSlideInfo();
+  await automation.getSlideInfo();
   
   sendProgress(3, 5, 'Converting to PDF...');
   const slideMetadata = await automation.exportThumbnails(currentThumbsDir, (current, total) => {

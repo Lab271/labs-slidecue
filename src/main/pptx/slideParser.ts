@@ -38,7 +38,7 @@ export async function parsePresentationData(pptxPath: string): Promise<Presentat
     console.log(`Found ${slideFiles.length} slide files`);
     
     // Extract presentation.xml to check for hidden slides
-    let hiddenInPresentation: number[] = [];
+    const hiddenInPresentation: number[] = [];
     try {
       const { stdout: presXml } = await execAsync(
         `unzip -p "${pptxPath}" "ppt/presentation.xml" 2>/dev/null`
@@ -52,7 +52,7 @@ export async function parsePresentationData(pptxPath: string): Promise<Presentat
           hiddenInPresentation.push(index + 1);
         }
       });
-    } catch (e) {
+    } catch {
       console.log('Could not parse presentation.xml for hidden slides');
     }
     
@@ -134,7 +134,7 @@ export async function parsePresentationData(pptxPath: string): Promise<Presentat
           } else {
             console.log(`Slide ${slideNum}: no notes relationship found`);
           }
-        } catch (e) {
+        } catch {
           // No notes for this slide
           console.log(`Slide ${slideNum}: no notes file`);
         }
@@ -192,7 +192,7 @@ export async function parsePresentationData(pptxPath: string): Promise<Presentat
  * Find the next visible slide after the given slide number
  */
 export function getNextVisibleSlide(currentSlide: number, presentationData: PresentationData): number | null {
-  const { visibleSlides, totalSlides } = presentationData;
+  const { visibleSlides } = presentationData;
   
   for (const slideNum of visibleSlides) {
     if (slideNum > currentSlide) {

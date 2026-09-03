@@ -86,6 +86,13 @@ jobs:
         if: env.JFROG_ENABLED != 'true'
         run: npm install --no-save vitest@^4
 
+      # Added with the eslint config itself (#63). `npm run lint` was broken for
+      # the entire life of the repo and nothing caught it, because no workflow
+      # ever invoked it - a lint script no job runs is a lint script that rots.
+      # Warnings do not fail the build; errors do.
+      - name: Lint
+        run: npm run lint
+
       - name: Type check
         run: npm run typecheck
 

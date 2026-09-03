@@ -8,7 +8,7 @@ import path from 'path';
 import log from 'electron-log';
 import { app } from 'electron';
 import { PowerPointAutomation, SlideInfo, SlideMetadata, ProgressCallback } from './types';
-import { parsePresentationData, PresentationData, getNextVisibleSlide, getSlideData } from './slideParser';
+import { PresentationData, getNextVisibleSlide, getSlideData } from './slideParser';
 
 interface PSCommand {
   action: string;
@@ -212,7 +212,6 @@ let presentationData: PresentationData | null = null;
 let currentSlide = 1;
 let currentAnimationStep = 0;
 let totalSlides = 1;
-let currentPresentationPath = '';
 let localPresentationCopy = '';
 
 export const windowsAutomation: PowerPointAutomation = {
@@ -237,7 +236,6 @@ export const windowsAutomation: PowerPointAutomation = {
   async openPresentation(filePath: string) {
     try {
       log.info('[Windows] Opening presentation:', filePath);
-      currentPresentationPath = filePath;
       
       // Copy file to local temp directory to avoid permission issues with cloud storage
       const tempDir = join(tmpdir(), 'slidecue-presentations');
@@ -541,7 +539,6 @@ export const windowsAutomation: PowerPointAutomation = {
       currentSlide = 1;
       currentAnimationStep = 0;
       totalSlides = 1;
-      currentPresentationPath = '';
     } catch (error) {
       log.error('[Windows] Failed to close presentation:', error);
     }

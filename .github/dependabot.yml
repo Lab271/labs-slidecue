@@ -11,6 +11,48 @@ updates:
       interval: "weekly"
     cooldown:
       default-days: 7
+    # Without grouping, dependabot raises one PR per package, and a package
+    # whose peers are pinned to a sibling's major can never resolve alone - the
+    # PR dies at `npm ci` with ERESOLVE before a single test runs. That is what
+    # happened to #47, #49, #50 and #51: four separate PRs, four peer conflicts,
+    # zero of them fixable in isolation. #49 and #50 are the clearest case - one
+    # bumps vite to 8, the other bumps @vitejs/plugin-react to a version
+    # requiring vite 8, and each fails precisely because the other is a separate
+    # PR. The groups below exist so those arrive as one resolvable change.
+    groups:
+      # eslint majors drop APIs its plugins compile against, and
+      # @typescript-eslint peers both eslint *and* typescript, which is why
+      # typescript rides along here rather than in a group of its own.
+      lint-and-types:
+        patterns:
+          - "eslint"
+          - "@eslint/*"
+          - "eslint-plugin-*"
+          - "@typescript-eslint/*"
+          - "typescript-eslint"
+          - "typescript"
+        update-types: ["major", "minor", "patch"]
+      # vite's major is a peer of every plugin in the build, electron-vite
+      # included - and electron-vite is usually the last to support a new one,
+      # so this group will sit still until it does. That is the correct
+      # behaviour: one PR that waits, rather than several that fail.
+      vite:
+        patterns:
+          - "vite"
+          - "@vitejs/*"
+          - "vite-plugin-*"
+          - "electron-vite"
+        update-types: ["major", "minor", "patch"]
+      # react and react-dom are released in lockstep and their @types follow the
+      # same major.
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types: ["major", "minor", "patch"]
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:

@@ -77,7 +77,7 @@ function startSlidePolling(io: Server, automation: any) {
         lastSlideNumber = info.currentSlide;
         io.emit('slide-changed', info);
       }
-    } catch (error) {
+    } catch {
       // Ignore errors during polling
     }
   }, 500);
