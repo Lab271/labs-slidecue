@@ -17,14 +17,33 @@ jobs:
       # The Artifactory steps below are opt-in and self-disabling, and this one
       # expression is the reason. They run only when the repository variable
       # JF_URL is set *and* the triggering event is allowed to see repository
-      # secrets. Forked pull requests are never given secrets, so without this
-      # guard every outside contribution would fail on `jf` authentication -
-      # which for a public Apache-2.0 project is unacceptable on its own, and
-      # also counts against the "zero JFrog-caused build failures" criterion the
-      # JFrog evaluation hangs on (Lab271/labs-jfrog-poc docs/06-evaluation.md,
-      # criterion 3b). Unset JF_URL and this workflow behaves exactly as it did
-      # before Artifactory existed: plain `npm ci` against registry.npmjs.org.
-      JFROG_ENABLED: ${{ vars.JF_URL != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+      # secrets. Unset JF_URL and this workflow behaves exactly as it did before
+      # Artifactory existed: plain `npm ci` against registry.npmjs.org.
+      #
+      # Two separate cases lose access to secrets, and both must be excluded or
+      # `jf` fails authentication:
+      #
+      #   1. Forked pull requests are never given secrets. Without this, every
+      #      outside contribution to a public Apache-2.0 project would fail -
+      #      unacceptable on its own, and also counts against the "zero
+      #      JFrog-caused build failures" criterion the JFrog evaluation hangs
+      #      on (Lab271/labs-jfrog-poc docs/06-evaluation.md, criterion 3b).
+      #
+      #   2. Dependabot pull requests. These are the non-obvious ones: the
+      #      branch lives in *this* repo, so the fork check above passes, but a
+      #      dependabot-triggered run is given the `dependabot` secret store
+      #      rather than the Actions one, and JF_ACCESS_TOKEN is not in it. The
+      #      `jf` CLI then talks to Artifactory unauthenticated and gets a flat
+      #      401 "Authentication is required" before a single package resolves,
+      #      taking down #65, #66, #67 and #68 together. Note that `vars` ARE
+      #      visible to dependabot, which is why JF_URL alone cannot gate this.
+      #
+      # Adding JF_ACCESS_TOKEN as a dependabot secret would also clear the 401,
+      # but the token is deliberately not handed to runs built from an automated
+      # dependency bump. These PRs resolve from registry.npmjs.org instead;
+      # what they change is the lockfile, and main re-resolves it through
+      # Artifactory on merge.
+      JFROG_ENABLED: ${{ vars.JF_URL != '' && github.actor != 'dependabot[bot]' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
 
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
