@@ -53,6 +53,25 @@ updates:
           - "@types/react-dom"
         update-types: ["major", "minor", "patch"]
 
+    # Grouping typescript with the eslint tooling was right - @typescript-eslint
+    # peers both - but it turned a red *PR* into a red dependabot *job*. The
+    # updater cannot build a resolvable lockfile for typescript 7 while
+    # @typescript-eslint peers `>=4.8.4 <6.1.0`, so it aborts the dependency
+    # with `dependency_file_not_resolvable: "Error while updating peer
+    # dependency."` and the whole run fails - four times in one evening. The
+    # group PR is still produced (#65 came out of one of those "failed" runs),
+    # so the only real cost is a permanently red job that would mask a genuine
+    # dependabot failure later.
+    #
+    # Ignoring the major stops dependabot attempting something that cannot
+    # succeed. It does not freeze typescript: 5.x minor and patch updates still
+    # flow, and they still travel in the lint-and-types group. Lift this the
+    # moment typescript-eslint widens its peer range - at which point the
+    # grouping does exactly what it was added for and bumps both together.
+    ignore:
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
+
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
