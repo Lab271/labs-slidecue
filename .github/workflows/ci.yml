@@ -6,9 +6,26 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   ci:
     runs-on: ubuntu-latest
+
+    env:
+      # The Artifactory steps below are opt-in and self-disabling, and this one
+      # expression is the reason. They run only when the repository variable
+      # JF_URL is set *and* the triggering event is allowed to see repository
+      # secrets. Forked pull requests are never given secrets, so without this
+      # guard every outside contribution would fail on `jf` authentication -
+      # which for a public Apache-2.0 project is unacceptable on its own, and
+      # also counts against the "zero JFrog-caused build failures" criterion the
+      # JFrog evaluation hangs on (Lab271/labs-jfrog-poc docs/06-evaluation.md,
+      # criterion 3b). Unset JF_URL and this workflow behaves exactly as it did
+      # before Artifactory existed: plain `npm ci` against registry.npmjs.org.
+      JFROG_ENABLED: ${{ vars.JF_URL != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) }}
+
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
 
@@ -17,13 +34,56 @@ jobs:
           node-version: '20'
           cache: 'npm'
 
+      # `custom-server-id` has to be `schubergphilis` because .jfrog/projects/npm.yaml
+      # names that server ID; the action would otherwise register a generated one and
+      # every `jf npm` command would fail with "server ID does not exist".
+      #
+      # `disable-auto-build-publish` matters more than it looks. By default this action's
+      # post-job step publishes any build-info that was collected but not published -
+      # without a project key. On this tenant we are project admin on `lab`, not platform
+      # admin, so an unscoped publish is a flat 403 against the platform-level
+      # artifactory-build-info repository, and it would fail the job *after* the tests
+      # already passed. We publish explicitly below, with --project.
+      - name: Set up JFrog CLI
+        if: env.JFROG_ENABLED == 'true'
+        uses: jfrog/setup-jfrog-cli@deda456d982fc5e9a7a020b63eb0d2968aedd33e # v5.1.0
+        env:
+          JF_URL: ${{ vars.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+        with:
+          version: 2.122.0
+          custom-server-id: schubergphilis
+          disable-auto-build-publish: true
+
+      # Two variants of the same install, selected by JFROG_ENABLED. `jf npm ci` is
+      # `npm ci` with dependency collection bolted on: same lockfile, same result on
+      # disk, plus a build-info record of all 615 resolved packages. The build number
+      # is prefixed `ci-` on purpose - release.yml uses the git tag as its build number,
+      # and github.run_number is a per-workflow counter, so bare numbers from the two
+      # workflows would eventually collide on the same build name.
+      - name: Install dependencies (through Artifactory)
+        if: env.JFROG_ENABLED == 'true'
+        run: jf npm ci --build-name=slidecue --build-number=ci-${{ github.run_number }} --project=${{ vars.JF_PROJECT }}
+
       - name: Install dependencies
+        if: env.JFROG_ENABLED != 'true'
         run: npm ci
 
       # vitest is intentionally not a package.json dependency so that the
       # committed package-lock.json stays in sync for `npm ci` (used by the
       # release workflow). Install it transiently for the test run.
+      #
+      # Deliberately no --build-name/--build-number here: this resolves outside the
+      # lockfile and is not part of what the package ships, so recording it would
+      # pollute the dependency tree that Xray reasons about. It still goes through
+      # lab-npm-dev, which is the point - it was the last direct hit on
+      # registry.npmjs.org in this workflow.
+      - name: Add test runner (through Artifactory)
+        if: env.JFROG_ENABLED == 'true'
+        run: jf npm install vitest@^4 --no-save
+
       - name: Add test runner
+        if: env.JFROG_ENABLED != 'true'
         run: npm install --no-save vitest@^4
 
       - name: Type check
@@ -79,3 +139,20 @@ jobs:
           done
 
           exit $status
+
+      # Last, so a build whose tests or pack check failed never gets a published
+      # build record.
+      # With auto-publish disabled above, a failed job simply leaves the collected
+      # build-info on the runner and it disappears with the runner.
+      #
+      # `build-add-git` is not optional bookkeeping: `jf rt build-publish` does NOT
+      # collect VCS information by itself (verified - build-info comes back with
+      # "vcs": []), and without it there is no commit link, which is exactly the
+      # artifact -> deps -> commit chain this whole exercise is for. On a GitHub
+      # runner HEAD is detached, so `branch` comes back empty; the revision, which
+      # is the part that matters, is correct.
+      - name: Publish build-info
+        if: env.JFROG_ENABLED == 'true'
+        run: |
+          jf rt build-add-git slidecue ci-${{ github.run_number }} --project=${{ vars.JF_PROJECT }}
+          jf rt build-publish slidecue ci-${{ github.run_number }} --project=${{ vars.JF_PROJECT }}

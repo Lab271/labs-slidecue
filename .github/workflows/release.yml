@@ -4,9 +4,22 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  # Manual entry point for the promotion only. A promotion is a decision about an
+  # artifact that already exists, so it has to be possible to make that decision
+  # again - a reviewer who declines, a release that is approved a day later, or a
+  # build that needs re-promoting after a mistake. Everything before `promote` is
+  # guarded on the ref being a tag, so a dispatch run does not rebuild, repackage
+  # or re-release anything; it promotes bytes that are already in Artifactory. The
+  # `production` environment still gates it, so this is not a way around the review.
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: 'Artifactory build number to promote (the release tag, e.g. v0.7.5)'
+        required: true
 
 jobs:
   build-mac:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     runs-on: macos-latest
 
     steps:
@@ -39,6 +52,7 @@ jobs:
             dist/latest-mac.yml
 
   build-windows:
+    if: ${{ startsWith(github.ref, 'refs/tags/v') }}
     runs-on: windows-latest
 
     steps:
@@ -109,3 +123,194 @@ jobs:
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # Publishes the npm tarball and its build-info into the *dev* repository, so the
+  # approval-gated promotion below has something to promote and a recorded digest to
+  # compare against.
+  #
+  # Be clear about what this is and is not. `prepack` builds and the files allowlist ships
+  # out/ (#59, #62), so the tarball does contain the application - but the thing people
+  # install is still the signed installer from the GitHub Release above. The npm package is
+  # not SlideCue's distribution channel and this job does not make it one; what it adds is
+  # a promotable artifact with a build record attached to it.
+  publish-jfrog:
+    needs: [release]
+    # The `needs.release.result` check is not redundant: supplying any `if` at job level
+    # replaces the implicit success() check on `needs`, so without it a manual dispatch
+    # (where `release` is skipped) would fall through into publishing.
+    if: ${{ needs.release.result == 'success' && vars.JF_URL != '' }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # See ci.yml for why custom-server-id and disable-auto-build-publish are set.
+      - name: Set up JFrog CLI
+        uses: jfrog/setup-jfrog-cli@deda456d982fc5e9a7a020b63eb0d2968aedd33e # v5.1.0
+        env:
+          JF_URL: ${{ vars.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+        with:
+          version: 2.122.0
+          custom-server-id: schubergphilis
+          disable-auto-build-publish: true
+
+      # The install, the publish and the build-info all carry the same build name and
+      # number, and all three have to happen in this one job: the jf CLI accumulates
+      # build-info in a directory on the runner and only ships it on build-publish.
+      # Splitting them loses data silently rather than failing - `jf npm publish` on its
+      # own produces a build record with the artifact and *zero* dependencies (verified),
+      # which would quietly gut the dependency half of the audit trail.
+      #
+      # Build number is the tag itself (v0.7.5), which is both meaningful and impossible
+      # to collide with ci.yml's `ci-<run_number>`.
+      - name: Resolve dependencies through Artifactory
+        run: jf npm ci --build-name=slidecue --build-number=${{ github.ref_name }} --project=${{ vars.JF_PROJECT }}
+
+      - name: Publish package to the dev repository
+        run: jf npm publish --build-name=slidecue --build-number=${{ github.ref_name }} --project=${{ vars.JF_PROJECT }}
+
+      # `jf rt build-publish` does not collect git information on its own - without
+      # build-add-git the record comes back with "vcs": [] and the commit link, the whole
+      # reason for publishing build-info, is missing.
+      - name: Publish build-info
+        run: |
+          jf rt build-add-git slidecue ${{ github.ref_name }} --project=${{ vars.JF_PROJECT }}
+          jf rt build-publish slidecue ${{ github.ref_name }} --project=${{ vars.JF_PROJECT }}
+
+  # The human in front of this job is the point of it.
+  #
+  # `environment: production` carries a required reviewer, so GitHub pauses here and
+  # records who released. That approver is the fourth link in the chain the JFrog
+  # evaluation asks for - artifact -> dependencies -> commit -> approver, retrievable in
+  # one query (Lab271/labs-jfrog-poc docs/06-evaluation.md, criterion 2b). The first
+  # three come out of build-info for free. The approver does not: GitHub exposes it in
+  # no context and no environment variable, and Artifactory only records the identity of
+  # the token that called the API - which here is a shared CI token, not a person. So we
+  # read the approver back from the run's review history and write it into the promotion
+  # comment and onto the artifact properties, where a single GET on the build returns it
+  # alongside everything else.
+  promote:
+    needs: [publish-jfrog]
+    # Runs after a tagged release publishes, or on a manual dispatch where the publish
+    # job was skipped because there is nothing new to publish. Skipping the job outright
+    # when JF_URL is unset also means no pointless approval request lands in someone's
+    # inbox on a repository that is not wired to Artifactory.
+    if: ${{ !cancelled() && vars.JF_URL != '' && (needs.publish-jfrog.result == 'success' || (github.event_name == 'workflow_dispatch' && needs.publish-jfrog.result == 'skipped')) }}
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      actions: read # to read this run's review history, i.e. who approved
+
+    env:
+      BUILD_NAME: slidecue
+      BUILD_NUMBER: ${{ github.event.inputs.build_number || github.ref_name }}
+      PROD_REPO: lab-npm-prod-local
+
+    steps:
+      - name: Set up JFrog CLI
+        uses: jfrog/setup-jfrog-cli@deda456d982fc5e9a7a020b63eb0d2968aedd33e # v5.1.0
+        env:
+          JF_URL: ${{ vars.JF_URL }}
+          JF_ACCESS_TOKEN: ${{ secrets.JF_ACCESS_TOKEN }}
+        with:
+          version: 2.122.0
+          custom-server-id: schubergphilis
+          disable-auto-build-publish: true
+
+      # Record the dev digests BEFORE promoting, because after promoting there may be
+      # nothing left to record: `jf rt build-promote` MOVES artifacts unless told to
+      # copy. We do pass --copy=true below, but the ordering is still the honest one -
+      # a comparison taken after the fact only proves the target exists.
+      - name: Record the dev digests before promoting
+        run: |
+          set -euo pipefail
+          jf rt curl -sS "/api/build/${BUILD_NAME}/${BUILD_NUMBER}?project=${{ vars.JF_PROJECT }}" > build-info.json
+          jq -r '.buildInfo.modules[]?.artifacts[]? | [.path, .sha256] | @tsv' build-info.json > dev-digests.tsv
+          if [ ! -s dev-digests.tsv ]; then
+            echo "::error::build-info ${BUILD_NAME}/${BUILD_NUMBER} lists no artifacts - nothing to promote"
+            exit 1
+          fi
+          cat dev-digests.tsv
+
+      # Fail rather than guess. A promotion whose approver we cannot name is exactly the
+      # audit gap this pipeline exists to close, so recording "unknown" would be worse
+      # than stopping: it would put a false provenance record in Artifactory. The usual
+      # cause is the `production` environment having no required reviewer, in which case
+      # GitHub never paused and nobody actually approved anything.
+      #
+      # This cannot block a release: the GitHub Release is already published by the time
+      # this job runs.
+      - name: Identify the approver
+        id: approver
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          approver=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/approvals" \
+            --jq '[.[] | select(.state == "approved") | .user.login] | last // empty')
+          if [ -z "$approver" ]; then
+            echo "::error::No environment approval is recorded for this run. Give the 'production' environment a required reviewer (Settings -> Environments), otherwise the promotion has no approver to record."
+            exit 1
+          fi
+          echo "login=$approver" >> "$GITHUB_OUTPUT"
+          echo "Approved by @$approver"
+
+      # --copy=true, not the default. Promotion moves artifacts by default, which would
+      # empty the version out of lab-npm-dev-local and break anything still resolving it
+      # from dev the moment a release is approved.
+      - name: Promote the build to production
+        env:
+          APPROVER: ${{ steps.approver.outputs.login }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          set -euo pipefail
+          jf rt build-promote "${BUILD_NAME}" "${BUILD_NUMBER}" "${PROD_REPO}" \
+            --project=${{ vars.JF_PROJECT }} \
+            --copy=true \
+            --status=Released \
+            --comment="Approved by @${APPROVER} via GitHub Environment 'production' (${RUN_URL})" \
+            --props "promoted.by=${APPROVER};promoted.via=github-environment-production;promoted.run=${{ github.run_id }}"
+
+      # Criterion 2a as a check rather than a claim: the bytes in production must be the
+      # bytes that were built, byte for byte, with no rebuild anywhere in the path. If
+      # that ever stops being true the whole build-once-promote argument collapses, so
+      # this fails the job rather than warning.
+      - name: Assert the promoted digests are identical
+        run: |
+          set -euo pipefail
+          failed=0
+          while IFS=$'\t' read -r artifact_path dev_sha; do
+            prod_sha=$(jf rt curl -sS "/api/storage/${PROD_REPO}/${artifact_path}" | jq -r '.checksums.sha256 // empty')
+            if [ "$prod_sha" != "$dev_sha" ]; then
+              echo "::error::digest mismatch for ${artifact_path}: dev=${dev_sha} prod=${prod_sha:-<missing>}"
+              failed=1
+            else
+              echo "identical  ${artifact_path}  sha256:${dev_sha}"
+            fi
+          done < dev-digests.tsv
+          exit "$failed"
+
+      - name: Summarise the promotion
+        if: success()
+        env:
+          APPROVER: ${{ steps.approver.outputs.login }}
+        run: |
+          {
+            echo "### Promoted \`${BUILD_NAME}/${BUILD_NUMBER}\` to \`${PROD_REPO}\`"
+            echo
+            echo "Approved by @${APPROVER}. Digests verified identical to \`lab-npm-dev-local\`."
+            echo
+            echo "Full record (artifact, dependencies, commit, approver) in one query:"
+            echo
+            echo '```'
+            echo "jf rt curl \"/api/build/${BUILD_NAME}/${BUILD_NUMBER}?project=${{ vars.JF_PROJECT }}\""
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
