@@ -173,6 +173,43 @@ jobs:
       - name: Resolve dependencies through Artifactory
         run: jf npm ci --build-name=slidecue --build-number=${{ github.ref_name }} --project=${{ vars.JF_PROJECT }}
 
+      # Refuse to overwrite a version that already exists. This is not defensive
+      # tidiness, it is the only protection available. Found the hard way on the Cargo
+      # pilot (Lab271/sqlite-rs#684) and it applies identically here:
+      #
+      #   * `lab-npm-*-local` are mutable. `blackedOut: false`, and no repository
+      #     immutability setting exists on a local repo - all 64 config fields were
+      #     checked. Re-publishing a version overwrites the bytes silently, with no
+      #     error, including a version already promoted with status `Released`.
+      #   * A promoted artifact was overwritten this way during the evaluation. The
+      #     build-info still pointed at a digest that no longer existed in the
+      #     repository.
+      #   * `npm ci` resolves from the lockfile's integrity hash, so an overwrite is not
+      #     a harmless re-upload - a consumer pinning this version gets an integrity
+      #     mismatch rather than a useful error.
+      #
+      # Repository immutability (Lab271/labs-jfrog-poc#4) is the real fix and needs
+      # platform admin we do not have. It is deliberately a hard failure and not a skip:
+      # unlike the Cargo pilot, this job only runs from a version tag, so a version that
+      # already exists means the tag was moved or re-cut, and continuing would either
+      # overwrite prod bytes or promote a build whose artifact someone else published.
+      - name: Refuse to overwrite an existing version
+        run: |
+          set -euo pipefail
+          version="$(node -p 'require("./package.json").version')"
+          echo "package version: ${version}"
+          clash=false
+          for repo in lab-npm-dev-local lab-npm-prod-local; do
+            code=$(jf rt curl -s -o /dev/null -w '%{http_code}' \
+              "/api/storage/${repo}/slidecue/-/slidecue-${version}.tgz")
+            echo "  ${repo}: HTTP ${code}"
+            if [ "$code" = "200" ]; then clash=true; fi
+          done
+          if [ "$clash" = "true" ]; then
+            echo "::error::slidecue ${version} already exists in Artifactory. Publishing would overwrite bytes that may already be released and pinned. Bump the version rather than re-cutting the tag."
+            exit 1
+          fi
+
       - name: Publish package to the dev repository
         run: jf npm publish --build-name=slidecue --build-number=${{ github.ref_name }} --project=${{ vars.JF_PROJECT }}
 
