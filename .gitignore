@@ -83,13 +83,16 @@ web_modules/
 .cache
 .parcel-cache
 
-# Next.js build output
+# Next.js build output (`/out/` is also electron-vite's build directory).
+# Anchored and slash-suffixed on purpose: bare `out` matches a file or directory
+# named `out` at any depth, which is wider than intended.
 .next
-out
+/out/
 
-# Nuxt.js build / generate output
+# Nuxt.js build / generate output (`/dist/` is also electron-builder's output directory).
+# Anchored for the same reason as `/out/` above.
 .nuxt
-dist
+/dist/
 
 # Gatsby files
 .cache/

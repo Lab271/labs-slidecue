@@ -81,6 +81,42 @@ slidecue/
     └── renderer/
 ```
 
+## Packaging
+
+SlideCue ships as an Electron installer (`.dmg`, `.zip`, `.exe`) built by
+electron-builder. Two separate allowlists decide what ends up where, and they are
+easy to confuse:
+
+- **`build.files` in `package.json`** — read by *electron-builder*. Controls what goes
+  into the app bundle (`out/**` plus `package.json`), with `build.extraResources`
+  adding the web remote UI, the PowerShell bridge and the app icon alongside it.
+- **`files` (top level) in `package.json`** — read by *npm*, for `npm pack` /
+  `npm publish`. Controls the npm tarball, which the JFrog pilot publishes to
+  Artifactory (see issue #56).
+
+The npm allowlist is `out/**`, `resources/remote/**` and `resources/icon.png`. It is an
+allowlist rather than a set of ignore rules because npm's default is "pack everything
+not ignored", and for an application that default is wrong in both directions: it
+shipped 3.8 MB of design-source icons while omitting things that matter. The three
+entries are the paths the app resolves at runtime — `out/**` is the built main, preload
+and renderer; `resources/remote/**` and `resources/icon.png` are what the Express
+server serves when `app.isPackaged` is false (see `src/main/index.ts` and
+`src/main/server/index.ts`).
+
+Deliberately *not* in the npm tarball:
+
+- `src/**` — the tarball ships built output; the source is on GitHub.
+- `icon/**` — design source (five near-identical renders of the same icon, ~2.9 MB).
+  It stays in the repository because `icon/icon_final.png` is the README banner, but
+  nothing at runtime reads it.
+- `resources/icon.icns`, `resources/icon.ico`, `resources/sbp.link.sp_space.png` —
+  build-time inputs. The first two are consumed by electron-builder from a git checkout;
+  the third is bundled into `out/renderer/` by Vite.
+
+`prepack` runs `npm run build`, so `npm pack` cannot silently produce a tarball with no
+application code in it — which is exactly what it did before, on any checkout where
+`out/` had not been built.
+
 ## Component Details
 
 ### Main Process (`src/main/`)
