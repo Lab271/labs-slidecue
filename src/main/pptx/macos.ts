@@ -6,6 +6,7 @@ import { readdir, access, mkdir, unlink, copyFile } from 'fs/promises';
 import { join, basename } from 'path';
 import { tmpdir } from 'os';
 import { PowerPointAutomation, SlideInfo, SlideMetadata, ProgressCallback } from './types';
+import { serializeAutomation } from './serialize';
 import { parsePresentationData, PresentationData, getNextVisibleSlide, getSlideData } from './slideParser';
 import log from 'electron-log';
 
@@ -57,7 +58,7 @@ end tell
   }
 }
 
-export const macOSAutomation: PowerPointAutomation = {
+const macOSBackend: PowerPointAutomation = {
   async checkInstalled() {
     try {
       await access('/Applications/Microsoft PowerPoint.app');
@@ -242,7 +243,8 @@ end tell
   },
 
   async nextSlide() {
-    const slideData = presentationData ? getSlideData(currentSlide, presentationData) : null;
+    const slideBefore = currentSlide;
+    const slideData = presentationData ? getSlideData(slideBefore, presentationData) : null;
     const animationsOnSlide = slideData?.animationClicks || 0;
     
     // Send the keystroke
@@ -251,19 +253,27 @@ end tell
     // Wait for PowerPoint to process
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    // Check if we advanced an animation or moved to next slide
-    if (currentAnimationStep < animationsOnSlide) {
-      // Might be an animation click
-      currentAnimationStep++;
-    }
-    
     // Query PowerPoint for actual slide number
     const actualSlide = await queryCurrentSlide();
     
-    if (actualSlide !== currentSlide) {
-      // We moved to a new slide
-      currentSlide = actualSlide;
-      currentAnimationStep = 0;
+    // Read the state back after the await instead of reusing the snapshot taken
+    // above, then write both fields in one synchronous block. The serializer
+    // already stops another command from landing in between; the re-read is
+    // what makes that checkable rather than assumed.
+    const slideChanged = actualSlide !== currentSlide;
+    let newStep = currentAnimationStep;
+    
+    // Either we advanced an animation or we moved to a new slide.
+    if (slideChanged) {
+      newStep = 0;
+    } else if (newStep < animationsOnSlide) {
+      newStep++;
+    }
+    
+    currentSlide = actualSlide;
+    currentAnimationStep = newStep;
+    
+    if (slideChanged) {
       console.log(`Moved to slide ${currentSlide}`);
     } else {
       console.log(`Animation ${currentAnimationStep}/${animationsOnSlide} on slide ${currentSlide}`);
@@ -380,14 +390,16 @@ tell application "Microsoft PowerPoint"
 end tell
     `);
     
-    // Clean up temp copy
-    if (localPresentationCopy) {
+    // Clean up temp copy. The path is cleared before the unlink is awaited, so
+    // the field is never left pointing at a file that is on its way out.
+    const tempCopy = localPresentationCopy;
+    if (tempCopy) {
+      localPresentationCopy = '';
       try {
-        await unlink(localPresentationCopy);
+        await unlink(tempCopy);
       } catch {
         // Ignore
       }
-      localPresentationCopy = '';
     }
     
     // Reset state
@@ -396,3 +408,7 @@ end tell
     currentAnimationStep = 0;
   },
 };
+
+// One command at a time: the module-level state above is only consistent if
+// nothing interleaves with it. See serialize.ts.
+export const macOSAutomation = serializeAutomation(macOSBackend);

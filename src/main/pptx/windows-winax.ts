@@ -5,6 +5,7 @@ import { join, basename } from 'path';
 import { tmpdir } from 'os';
 import log from 'electron-log';
 import { PowerPointAutomation, SlideInfo, SlideMetadata, ProgressCallback } from './types';
+import { serializeAutomation } from './serialize';
 import { parsePresentationData, PresentationData, getNextVisibleSlide, getSlideData } from './slideParser';
 
 // Try to load winax
@@ -40,7 +41,7 @@ function queryCurrentSlide(): number {
   return currentSlide;
 }
 
-export const windowsWinaxAutomation: PowerPointAutomation = {
+const winaxBackend: PowerPointAutomation = {
   async checkInstalled() {
     if (!winax) {
       log.error('[Windows-WinAX] winax module not available');
@@ -215,9 +216,12 @@ export const windowsWinaxAutomation: PowerPointAutomation = {
       
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      currentSlide = queryCurrentSlide();
+      // Logging the move re-reads the state after the await, so the assignment
+      // below cannot be based on the value captured before the COM call.
+      const actualSlide = queryCurrentSlide();
+      log.info('[Windows-WinAX] Moved from slide', currentSlide, 'to slide', actualSlide);
+      currentSlide = actualSlide;
       currentAnimationStep = 0;
-      log.info('[Windows-WinAX] Moved to slide', currentSlide);
     } catch (error) {
       log.error('[Windows-WinAX] Failed to go to previous slide:', error);
     }
@@ -333,15 +337,17 @@ export const windowsWinaxAutomation: PowerPointAutomation = {
         pptApp = null;
       }
       
-      // Clean up temp copy
-      if (localPresentationCopy) {
+      // Clean up temp copy. The path is cleared before the unlink is awaited,
+      // so the field is never left pointing at a file that is on its way out.
+      const tempCopy = localPresentationCopy;
+      if (tempCopy) {
+        localPresentationCopy = '';
         try {
-          await unlink(localPresentationCopy);
+          await unlink(tempCopy);
           log.info('[Windows-WinAX] Deleted temp presentation copy');
         } catch (error) {
           log.error('[Windows-WinAX] Failed to delete temp copy:', error);
         }
-        localPresentationCopy = '';
       }
       
       // Reset state
@@ -355,3 +361,7 @@ export const windowsWinaxAutomation: PowerPointAutomation = {
     }
   },
 };
+
+// One command at a time: the module-level state above is only consistent if
+// nothing interleaves with it. See serialize.ts.
+export const windowsWinaxAutomation = serializeAutomation(winaxBackend);

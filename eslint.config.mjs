@@ -62,15 +62,10 @@ export default [
       'prefer-const': 'error',
       'no-var': 'error',
 
-      // 'warn', not 'error'. This flags seven pre-existing sites in the
-      // PowerPoint automation backends where module-level state (currentSlide,
-      // currentAnimationStep, localPresentationCopy) is read before an `await`
-      // and written after it. They read as genuine interleaving hazards under
-      // rapid remote input rather than false positives, but fixing them means
-      // reworking the concurrency model of code that can only be exercised
-      // against a real PowerPoint install - well outside the scope of turning
-      // linting on. Left visible rather than disabled so the debt stays counted.
-      'require-atomic-updates': 'warn',
+      // Not in `recommended`, kept anyway: it catches shared state that is read
+      // before an `await` and written after it, which is exactly the shape the
+      // PowerPoint backends keep their slideshow position in.
+      'require-atomic-updates': 'error',
 
       // Off on purpose, per typescript-eslint's own guidance: the compiler
       // already resolves every identifier, and keeping it on would mean

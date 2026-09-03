@@ -58,6 +58,7 @@ slidecue/
 │   │   ├── index.ts             # Entry point, IPC handlers
 │   │   ├── pptx/
 │   │   │   ├── slideParser.ts   # PPTX file parser (JSZip)
+│   │   │   ├── serialize.ts     # One-command-at-a-time wrapper for a backend
 │   │   │   ├── macos.ts         # AppleScript automation
 │   │   │   └── windows.ts       # COM automation (TODO)
 │   │   └── server/
@@ -133,6 +134,17 @@ Extracts metadata from PowerPoint files using JSZip:
 - Hidden slide detection
 - Speaker notes per slide (via relationship files)
 - Slide dimensions
+
+#### `pptx/serialize.ts` — Command Serialization
+
+Every backend caches the slideshow position in module-level state and refreshes
+it from PowerPoint across an `await`. `serializeAutomation()` chains all calls
+onto a single promise so only one is ever in flight, which is what keeps that
+cache in step with PowerPoint when several remotes, a double-tap, and the 500 ms
+`getSlideInfo()` poll all arrive at once. Each backend exports its automation
+object already wrapped, so both `main/index.ts` and `server/socket.ts` share one
+queue. Backend methods must therefore never call each other through the exported
+object.
 
 #### `pptx/macos.ts` — macOS Automation
 Controls PowerPoint via AppleScript:
