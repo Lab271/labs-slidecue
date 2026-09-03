@@ -1,0 +1,24 @@
+# Resolve npm dependencies through the Schuberg Philis Artifactory cache instead of
+# hitting registry.npmjs.org directly. Read by the `jf` CLI (`jf npm ci`, `jf npm install`).
+#
+# Why this file and not a committed .npmrc: this repository is public. An internal
+# registry URL in .npmrc would apply to everyone and make `npm ci` fail for any
+# anonymous clone. This config only takes effect for someone running the `jf` CLI with a
+# configured server, so plain `npm ci` against the public registry keeps working.
+#
+# It deliberately contains repository names only. Credentials come from the local
+# `jf config` and are injected into a temporary .npmrc per command, never committed.
+#
+# Use `npm ci`, not `npm install`, when resolving through Artifactory. npm's
+# replace-registry-host default rewrites the registry host at fetch time, so
+# package-lock.json keeps pointing at registry.npmjs.org and stays portable. A plain
+# `npm install` through the proxy would rewrite every `resolved` URL to the Artifactory
+# hostname and pin the lockfile to one server.
+version: 1
+type: npm
+resolver:
+    repo: lab-npm-dev
+    serverId: schubergphilis
+deployer:
+    repo: lab-npm-dev-local
+    serverId: schubergphilis
