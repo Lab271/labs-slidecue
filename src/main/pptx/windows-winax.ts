@@ -24,7 +24,6 @@ let presentationData: PresentationData | null = null;
 let currentSlide = 1;
 let currentAnimationStep = 0;
 let totalSlides = 1;
-let currentPresentationPath = '';
 let localPresentationCopy = '';
 
 /**
@@ -68,7 +67,6 @@ export const windowsWinaxAutomation: PowerPointAutomation = {
 
     try {
       log.info('[Windows-WinAX] Opening presentation:', filePath);
-      currentPresentationPath = filePath;
       
       // Copy file to local temp directory
       const tempDir = join(tmpdir(), 'slidecue-presentations');
@@ -352,7 +350,6 @@ export const windowsWinaxAutomation: PowerPointAutomation = {
       currentSlide = 1;
       currentAnimationStep = 0;
       totalSlides = 1;
-      currentPresentationPath = '';
     } catch (error) {
       log.error('[Windows-WinAX] Failed to close presentation:', error);
     }

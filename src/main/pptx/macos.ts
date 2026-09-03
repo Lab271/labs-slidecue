@@ -17,7 +17,6 @@ let currentSlide = 1;
 let currentAnimationStep = 0;
 let totalSlides = 1;
 let currentPresentationPath = '';
-let currentThumbsDir = '';
 let localPresentationCopy = '';
 
 function runAppleScript(script: string): Promise<string> {
@@ -114,7 +113,6 @@ end tell
   },
 
   async exportThumbnails(outputDir: string, onProgress?: ProgressCallback) {
-    currentThumbsDir = outputDir;
     await mkdir(outputDir, { recursive: true });
     
     // Use the local copy path for conversion
@@ -194,7 +192,7 @@ end tell
     }
     
     // Find all generated PNG files
-    let thumbnails: string[] = [];
+    const thumbnails: string[] = [];
     try {
       const files = await readdir(outputDir);
       const pngs = files
